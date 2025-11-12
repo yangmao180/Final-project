@@ -2,4 +2,13 @@
 title: "Project Proposal"
 format: html
 ---
-
+- The title of your project and the team members names
+- You should describe a research or data analysis question and explain its importance
+- You should summarize work that already exists (if it does)
+- You should outline the work you plan to do
+- You should demonstrate you have access to the data, describe the data, and propose how you will collect the data
+- You should describe the programming paradigms you plan to use and why it makes sense to combine them for your project
+- You should describe any packages and/or software you plan to use
+- You should briefly describe the data analytic product you plan to build
+- You should describe a tentative timeline for the proposal
+- You should describe how the tasks will be split amongst the team members
