@@ -2,13 +2,69 @@
 title: "Project Proposal"
 format: html
 ---
-- The title of your project and the team members names
+
+The title of your project and the team members names:
+
+Title of Project: 
+Team member names: 
+| Name        | Email           | JHED     |
+|-------------|-----------------|----------|
+| Mao Yang    | myang112@jh.edu | myang112 |
+| Jia Yu Pan  | jpan49jh.edu    | jpan49   |
+| Rozanne Lim | rlim8@jh.edu    | rlim8    |
+| Fan Yu      | fyu24@jh.edu    | fyu24    |
+
 - You should describe a research or data analysis question and explain its importance
+
+Question: 
+What component (genre, show length, director, cast) make shows and movies popular, and how can reviewer sentiment predict box office revenue?  
+
 - You should summarize work that already exists (if it does)
+
+
+
 - You should outline the work you plan to do
+
+- Identifying variables that are associated with popularity shows and movies 
+- Collect data using API and rvest 
+- Analyze data using functional programming paradigms and R packages 
+- Create data visualizations of movie popularity (revenue) by the different variables [dashboard] (word cloud, etc.)
+- Predictive - variables, reviewer sentiment predict box office revenue for upcoming movies 
+
+
+
 - You should demonstrate you have access to the data, describe the data, and propose how you will collect the data
+
+- The Movie Database (https://www.themoviedb.org/?language=en-US) 
+- Just Watch API (https://www.justwatch.com/us/lists/public-lists) 
+- OMDb API (https://www.omdbapi.com/) 
+- IMDB (https://www.imdb.com/) 
+- Trakt API (https://trakt.docs.apiary.io/#) 
+- Rotten Tomatoes (https://www.rottentomatoes.com/) 
+- Box Office Mojo (https://www.boxofficemojo.com) 
+
+
 - You should describe the programming paradigms you plan to use and why it makes sense to combine them for your project
+
+- Functional Programming Paradigm
+- Machine Learning Programming Paradigm
+- 
+
 - You should describe any packages and/or software you plan to use
+
+- rvest (HTML)
+- 
+
 - You should briefly describe the data analytic product you plan to build
+
+- Dashboard shiny 
+
 - You should describe a tentative timeline for the proposal
+
+- Meeting with Professor Stephanie Hicks Nov 17 
+- 
+- Final Project Presentation Dec 20
+
+
 - You should describe how the tasks will be split amongst the team members
+
