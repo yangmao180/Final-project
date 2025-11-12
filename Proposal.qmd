@@ -7,6 +7,7 @@ The title of your project and the team members names:
 
 Title of Project: 
 Team member names: 
+
 | Name        | Email           | JHED     |
 |-------------|-----------------|----------|
 | Mao Yang    | myang112@jh.edu | myang112 |
@@ -58,6 +59,7 @@ What component (genre, show length, director, cast) make shows and movies popula
 - You should briefly describe the data analytic product you plan to build
 
 - Dashboard shiny 
+
 
 - You should describe a tentative timeline for the proposal
 
