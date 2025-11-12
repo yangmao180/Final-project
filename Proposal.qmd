@@ -1,6 +1,10 @@
 ---
 title: "Project Proposal"
-format: html
+format: 
+    pdf: 
+        toc: true
+        number-sections: true
+        colorlinks: true
 ---
 
 Title of Project: 
