@@ -3,8 +3,6 @@ title: "Project Proposal"
 format: html
 ---
 
-The title of your project and the team members names:
-
 Title of Project: 
 Team member names: 
 
@@ -21,8 +19,8 @@ Question:
 What component (genre, show length, director, cast) make shows and movies popular, and how can reviewer sentiment predict box office revenue?  
 
 - You should summarize work that already exists (if it does)
-
-
+Jia Yu Pan 
+Fan Yu 
 
 - You should outline the work you plan to do
 
@@ -32,9 +30,12 @@ What component (genre, show length, director, cast) make shows and movies popula
 - Create data visualizations of movie popularity (revenue) by the different variables [dashboard] (word cloud, etc.)
 - Predictive - variables, reviewer sentiment predict box office revenue for upcoming movies 
 
+Rozanne Lim 
 
 
 - You should demonstrate you have access to the data, describe the data, and propose how you will collect the data
+
+Mao Yang 
 
 - The Movie Database (https://www.themoviedb.org/?language=en-US) 
 - Just Watch API (https://www.justwatch.com/us/lists/public-lists) 
@@ -47,18 +48,25 @@ What component (genre, show length, director, cast) make shows and movies popula
 
 - You should describe the programming paradigms you plan to use and why it makes sense to combine them for your project
 
+Fan Yu
+
 - Functional Programming Paradigm
 - Machine Learning Programming Paradigm
 - 
 
 - You should describe any packages and/or software you plan to use
 
+Mao Yang 
+
 - rvest (HTML)
 - 
 
 - You should briefly describe the data analytic product you plan to build
 
+Rozanne Lim 
+
 - Dashboard shiny 
+
 
 
 - You should describe a tentative timeline for the proposal
