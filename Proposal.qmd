@@ -6,6 +6,17 @@ format:
         colorlinks: true
 ---
 
+**Project Title: Predicting Movie Revenue**
+
+**Team Members**
+
+| Name        | Email           | JHED     |
+|-------------|-----------------|----------|
+| Mao Yang    | myang112@jh.edu | myang112 |
+| Jia Yu Pan  | jpan49@jh.edu    | jpan49   |
+| Rozanne Lim | rlim8@jh.edu    | rlim8    |
+| Fan Yu      | fyu24@jh.edu    | fyu24    |
+
 **Objective**
 
 The objective of our final project is to predict box office revenue using attributes of movies such as genre, show length, director, and cast. This information will be housed on an RShiny Dashboard. Our hope is that studios and investors are able to use the dashboard to learn about audiences’ movie preferences over time, and what attributes are appealing to the general public to guide future productions. 
