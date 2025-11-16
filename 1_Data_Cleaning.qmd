@@ -1,0 +1,108 @@
+---
+title: "Project 4: Data Collection & Wrangling"
+format: html
+---
+
+Loading R packages
+```{r}
+library(rvest)
+library(dplyr)
+library(purrr)
+library(tidyverse)
+library(httr)
+library(lubridate)
+
+#OMDB API wrappers
+library(imdbapi)
+library(ROMDB)
+```
+
+Obtain list of American movies from Wikipedia from the years 2000 - 2025 
+```{r}
+#sample code for 1 year (2000)
+html <- read_html(
+  "https://en.wikipedia.org/wiki/List_of_American_films_of_2000"
+)
+
+results <- html %>%
+  html_nodes(".wikitable") %>%
+  .[-1] %>% #removes the first table because it is for the top highest grossing for the specific year
+  html_table()
+
+#combines the separate tables (months) into one data frame, and adds a column with the relevant year
+film_2000 <- bind_rows(results) %>%
+  mutate(year = 2000)
+
+#URLs for wikipedia pages for American films 2000-2025
+years <- 2000:2025
+
+urls <- paste0(
+  "https://en.wikipedia.org/wiki/List_of_American_films_of_",
+  years
+)
+
+#Function to get all movies from 2000-2025
+movies_data <- function(url, year) {
+  html <- read_html(url)
+
+  results <- html %>%
+    html_nodes(".wikitable") %>%
+    .[-1] %>%
+    html_table()
+
+  bind_rows(results) %>%
+    mutate(year = year)
+}
+
+#using purrr to apply the custom function for all urls and years specified
+film_data <- map2_dfr(urls, years, movies_data)
+```
+
+Clean film_data 
+```{r}
+clean_film_data <- film_data %>%
+  filter(!is.na(Title)) %>%
+  mutate(
+    release = mdy(paste(Opening...1, Opening...2, year))
+  ) %>%
+  rename("Month" = "Opening...1") %>%
+  rename("Date" = "Opening...2") %>%
+  select(
+    -c(
+      "...7",
+      ".mw-parser-output .tooltip-dotted{border-bottom:1px dotted;cursor:help}Ref."
+    )
+  )
+
+
+#Extracting the list of films
+list_films <- clean_film_data %>%
+  pull(Title)
+```
+
+Use "IMDBAPI" Wrapper (which actually calls the OMDB API, not the IMDB API)
+sad because rate limit was reached :( will try again 
+
+```{r}
+
+trial <- list_films[1:20]
+
+get_api_data <- function(films) {
+  map_dfr(
+    films,
+    ~ find_by_title(
+      .x,
+      type = NULL,
+      season = NULL,
+      episode = NULL,
+      year_of_release = NULL,
+      plot = "short",
+      include_tomatoes = FALSE,
+      api_key = omdb_api_key()
+    )
+  )
+}
+
+get_api_data(trial)
+
+```
