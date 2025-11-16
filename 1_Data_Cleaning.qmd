@@ -11,6 +11,7 @@ library(purrr)
 library(tidyverse)
 library(httr)
 library(lubridate)
+library(here)
 
 #OMDB API wrappers
 library(imdbapi)
@@ -42,7 +43,7 @@ urls <- paste0(
 )
 
 #Function to get all movies from 2000-2025
-movies_data <- function(url, year) {
+extract_wiki_movies <- function(url, year) {
   html <- read_html(url)
 
   results <- html %>%
@@ -55,12 +56,21 @@ movies_data <- function(url, year) {
 }
 
 #using purrr to apply the custom function for all urls and years specified
-film_data <- map2_dfr(urls, years, movies_data)
+wiki_films <- map2_dfr(urls, years, extract_wiki_movies)
+
+if (!dir.exists(here("data"))) {
+  dir.create(here("data"))
+}
+
+#saving data
+saveRDS(wiki_films, file = here("data", "wiki_films.RDS"))
+
+
 ```
 
 Clean film_data 
 ```{r}
-clean_film_data <- film_data %>%
+clean_wiki_films <- wiki_films %>%
   filter(!is.na(Title)) %>%
   mutate(
     release = mdy(paste(Opening...1, Opening...2, year))
@@ -74,9 +84,10 @@ clean_film_data <- film_data %>%
     )
   )
 
+saveRDS(clean_wiki_films, file = here("data", "clean_wiki_films.RDS"))
 
 #Extracting the list of films
-list_films <- clean_film_data %>%
+list_films <- clean_wiki_films %>%
   pull(Title)
 ```
 
@@ -105,4 +116,30 @@ get_api_data <- function(films) {
 
 get_api_data(trial)
 
+```
+
+edit this code to save data from the OMDB APi when we get it to work ^-^
+```{r}
+
+# Cache individual datasets
+if (!file.exists(here("data", "md_elec_24.RDS"))) {
+  md_elec_24 <- get_acs(
+    geography = "county",
+    state = "MD",
+    variables = c(
+      total_pop = "B25132_001",
+      not_inc = "B25132_002",
+      charged = "B25132_003",
+      "< 50" = "B25132_004",
+      "50 to 99" = "B25132_005",
+      "100 to 149" = "B25132_006",
+      "150 to 199" = "B25132_007",
+      "200 to 249" = "B25132_008",
+      "250 or more" = "B25132_009"
+    ),
+    year = 2022,
+    survey = "acs5"
+  )
+  saveRDS(md_elec_24, file = here("data", "md_elec_24.RDS"))
+}
 ```
