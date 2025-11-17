@@ -12,6 +12,7 @@ library(tidyverse)
 library(httr)
 library(lubridate)
 library(here)
+library(jsonlite)
 
 #OMDB API wrappers
 library(imdbapi)
@@ -64,7 +65,8 @@ if (!dir.exists(here("data"))) {
 
 #saving data
 saveRDS(wiki_films, file = here("data", "wiki_films.RDS"))
-
+wiki_films <- readRDS("data/wiki_films.RDS")
+clean_wiki_films <- readRDS("data/clean_wiki_films.RDS")
 
 ```
 
@@ -82,7 +84,9 @@ clean_wiki_films <- wiki_films %>%
       "...7",
       ".mw-parser-output .tooltip-dotted{border-bottom:1px dotted;cursor:help}Ref."
     )
-  )
+  ) %>%
+  filter(release < "2025-11-18")
+
 
 saveRDS(clean_wiki_films, file = here("data", "clean_wiki_films.RDS"))
 
@@ -92,18 +96,16 @@ list_films <- clean_wiki_films %>%
 ```
 
 Use "IMDBAPI" Wrapper (which actually calls the OMDB API, not the IMDB API)
-sad because rate limit was reached :( will try again 
-
 ```{r}
+#trial code with a list of 20 films
 
 trial <- list_films[1:20]
 
-get_api_data <- function(films) {
-  map_dfr(
-    films,
+test <- map_dfr(
+    trial,
     ~ find_by_title(
       .x,
-      type = NULL,
+      type = "movie",
       season = NULL,
       episode = NULL,
       year_of_release = NULL,
@@ -112,34 +114,118 @@ get_api_data <- function(films) {
       api_key = omdb_api_key()
     )
   )
-}
 
-get_api_data(trial)
 
+#de-duplicates entries
+test <- test %>%
+  distinct(imdbID, .keep_all = TRUE)
 ```
 
-edit this code to save data from the OMDB APi when we get it to work ^-^
 ```{r}
+trial <- list_films[1:20]
 
-# Cache individual datasets
-if (!file.exists(here("data", "md_elec_24.RDS"))) {
-  md_elec_24 <- get_acs(
-    geography = "county",
-    state = "MD",
-    variables = c(
-      total_pop = "B25132_001",
-      not_inc = "B25132_002",
-      charged = "B25132_003",
-      "< 50" = "B25132_004",
-      "50 to 99" = "B25132_005",
-      "100 to 149" = "B25132_006",
-      "150 to 199" = "B25132_007",
-      "200 to 249" = "B25132_008",
-      "250 or more" = "B25132_009"
-    ),
-    year = 2022,
-    survey = "acs5"
+test <- map_dfr(
+    trial,
+    ~ find_by_title(
+      .x,
+      type = "movie",
+      season = NULL,
+      episode = NULL,
+      year_of_release = NULL,
+      plot = "short",
+      include_tomatoes = FALSE,
+      api_key = omdb_api_key()
+    )
   )
-  saveRDS(md_elec_24, file = here("data", "md_elec_24.RDS"))
+
+
+#de-duplicates entries
+test <- test %>%
+  distinct(imdbID, .keep_all = TRUE)
+```
+
+```{r}
+trial_2 <- list_films[21:100]
+
+test_2 <- map_dfr(
+    trial_2,
+    ~ find_by_title(
+      .x,
+      type = "movie",
+      season = NULL,
+      episode = NULL,
+      year_of_release = NULL,
+      plot = "short",
+      include_tomatoes = FALSE,
+      api_key = omdb_api_key()
+    )
+  )
+
+
+#de-duplicates entries
+test_2 <- test_2 %>%
+  distinct(imdbID, .keep_all = TRUE)
+```
+
+
+```{r}
+#splitting list_films into separate smaller lists to run the API
+split_list <- function(x, chunk_size) {
+  split(x, ceiling(seq_along(x) / chunk_size))
 }
+
+list_sep <- split_list(list_films, 950)
+
+#getting separate lists
+imap(list_sep, ~ assign(paste0("list_", .y), .x, envir = .GlobalEnv))
+
+
+#function
+data_2 <- 
+  map_dfr(
+    list_2,
+    ~ find_by_title(
+      .x,
+      type = "movie",
+      season = NULL,
+      episode = NULL,
+      year_of_release = NULL,
+      plot = "short",
+      include_tomatoes = TRUE,
+      api_key = omdb_api_key()
+    )
+  )
+
+data_2 <- data_2 %>% 
+  distinct(imdbID, .keep_all = TRUE)
+
+saveRDS(data_2, file = here("data", "data_1.RDS"))
+```
+
+
+```{r}
+https://api.themoviedb.org/3/search/movie
+
+tmdb_search <- function(title, api_key) {
+  
+  url <- "https://api.themoviedb.org/3/search/movie"
+  res <- GET(
+    url,
+    query = list(
+      api_key = api_key,
+      query   = title
+    )
+  )
+  data <- content(res, as = "text", encoding = "UTF-8") |> 
+    fromJSON()
+  
+  as_tibble(data$results)
+}
+
+movie_results <- map_dfr(
+  list_1,
+  ~ tmdb_search(.x, api_key = tmdb_key)
+)
+
+
 ```
