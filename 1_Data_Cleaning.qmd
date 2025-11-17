@@ -67,7 +67,6 @@ if (!dir.exists(here("data"))) {
 saveRDS(wiki_films, file = here("data", "wiki_films.RDS"))
 wiki_films <- readRDS("data/wiki_films.RDS")
 clean_wiki_films <- readRDS("data/clean_wiki_films.RDS")
-
 ```
 
 Clean film_data 
@@ -119,56 +118,11 @@ test <- map_dfr(
 #de-duplicates entries
 test <- test %>%
   distinct(imdbID, .keep_all = TRUE)
+
+saveRDS(test, file = here("data", "test.RDS"))
 ```
 
-
-```{r}
-trial <- list_films[1:20]
-
-test <- map_dfr(
-    trial,
-    ~ find_by_title(
-      .x,
-      type = "movie",
-      season = NULL,
-      episode = NULL,
-      year_of_release = NULL,
-      plot = "short",
-      include_tomatoes = FALSE,
-      api_key = omdb_api_key()
-    )
-  )
-
-
-#de-duplicates entries
-test <- test %>%
-  distinct(imdbID, .keep_all = TRUE)
-```
-
-```{r}
-trial_2 <- list_films[21:100]
-
-test_2 <- map_dfr(
-    trial_2,
-    ~ find_by_title(
-      .x,
-      type = "movie",
-      season = NULL,
-      episode = NULL,
-      year_of_release = NULL,
-      plot = "short",
-      include_tomatoes = FALSE,
-      api_key = omdb_api_key()
-    )
-  )
-
-
-#de-duplicates entries
-test_2 <- test_2 %>%
-  distinct(imdbID, .keep_all = TRUE)
-```
-
-
+Split lists - RUN THIS CODE 
 ```{r}
 #splitting list_films into separate smaller lists to run the API
 split_list <- function(x, chunk_size) {
@@ -180,10 +134,34 @@ list_sep <- split_list(list_films, 950)
 #getting separate lists
 imap(list_sep, ~ assign(paste0("list_", .y), .x, envir = .GlobalEnv))
 
+```
 
-#function
-data_2 <- 
-  map_dfr(
+Run List 1 
+```{r}
+data_1 <- map_dfr(
+    list_1,
+    ~ find_by_title(
+      .x,
+      type = "movie",
+      season = NULL,
+      episode = NULL,
+      year_of_release = NULL,
+      plot = "short",
+      include_tomatoes = FALSE,
+      api_key = omdb_api_key()
+    )
+  )
+
+#de-duplicates entries
+data_1 <- data_1 %>%
+  distinct(imdbID, .keep_all = TRUE)
+
+saveRDS(data_1, file = here("data", "data_1.RDS"))
+```
+
+Run List 2
+```{r}
+data_2 <- map_dfr(
     list_2,
     ~ find_by_title(
       .x,
@@ -192,18 +170,157 @@ data_2 <-
       episode = NULL,
       year_of_release = NULL,
       plot = "short",
-      include_tomatoes = TRUE,
+      include_tomatoes = FALSE,
       api_key = omdb_api_key()
     )
   )
 
-data_2 <- data_2 %>% 
+#de-duplicates entries
+data_2 <- data_2 %>%
   distinct(imdbID, .keep_all = TRUE)
 
-saveRDS(data_2, file = here("data", "data_1.RDS"))
+saveRDS(data_2, file = here("data", "data_2.RDS"))
 ```
 
+Run List 3
+```{r}
+data_3 <- map_dfr(
+    list_3,
+    ~ find_by_title(
+      .x,
+      type = "movie",
+      season = NULL,
+      episode = NULL,
+      year_of_release = NULL,
+      plot = "short",
+      include_tomatoes = FALSE,
+      api_key = omdb_api_key()
+    )
+  )
 
+#de-duplicates entries
+data_3 <- data_3 %>%
+  distinct(imdbID, .keep_all = TRUE)
+
+saveRDS(data_3, file = here("data", "data_3.RDS"))
+```
+
+Run List 4
+```{r}
+data_4 <- map_dfr(
+    list_4,
+    ~ find_by_title(
+      .x,
+      type = "movie",
+      season = NULL,
+      episode = NULL,
+      year_of_release = NULL,
+      plot = "short",
+      include_tomatoes = FALSE,
+      api_key = omdb_api_key()
+    )
+  )
+
+#de-duplicates entries
+data_4 <- data_4 %>%
+  distinct(imdbID, .keep_all = TRUE)
+
+saveRDS(data_4, file = here("data", "data_4.RDS"))
+```
+
+Run List 5
+```{r}
+data_5 <- map_dfr(
+    list_5,
+    ~ find_by_title(
+      .x,
+      type = "movie",
+      season = NULL,
+      episode = NULL,
+      year_of_release = NULL,
+      plot = "short",
+      include_tomatoes = FALSE,
+      api_key = omdb_api_key()
+    )
+  )
+
+#de-duplicates entries
+data_5 <- data_5 %>%
+  distinct(imdbID, .keep_all = TRUE)
+
+saveRDS(data_5, file = here("data", "data_5.RDS"))
+```
+
+Run List 6 
+```{r}
+data_6 <- map_dfr(
+    list_6,
+    ~ find_by_title(
+      .x,
+      type = "movie",
+      season = NULL,
+      episode = NULL,
+      year_of_release = NULL,
+      plot = "short",
+      include_tomatoes = FALSE,
+      api_key = omdb_api_key()
+    )
+  )
+
+#de-duplicates entries
+data_6 <- data_6 %>%
+  distinct(imdbID, .keep_all = TRUE)
+
+saveRDS(data_6, file = here("data", "data_6.RDS"))
+```
+
+Run List 7 
+```{r}
+data_7 <- map_dfr(
+    list_7,
+    ~ find_by_title(
+      .x,
+      type = "movie",
+      season = NULL,
+      episode = NULL,
+      year_of_release = NULL,
+      plot = "short",
+      include_tomatoes = FALSE,
+      api_key = omdb_api_key()
+    )
+  )
+
+#de-duplicates entries
+data_7 <- data_7 %>%
+  distinct(imdbID, .keep_all = TRUE)
+
+saveRDS(data_7, file = here("data", "data_7.RDS"))
+```
+
+Run List 8 
+```{r}
+data_8 <- map_dfr(
+    list_8,
+    ~ find_by_title(
+      .x,
+      type = "movie",
+      season = NULL,
+      episode = NULL,
+      year_of_release = NULL,
+      plot = "short",
+      include_tomatoes = FALSE,
+      api_key = omdb_api_key()
+    )
+  )
+
+#de-duplicates entries
+data_8 <- data_8 %>%
+  distinct(imdbID, .keep_all = TRUE)
+
+saveRDS(data_8, file = here("data", "data_8.RDS"))
+```
+
+IGNORE THIS
 ```{r}
 https://api.themoviedb.org/3/search/movie
 
