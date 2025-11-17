@@ -95,7 +95,7 @@ list_films <- clean_wiki_films %>%
   pull(Title)
 ```
 
-Use "IMDBAPI" Wrapper (which actually calls the OMDB API, not the IMDB API)
+[TEST FOR 20 MOVIES] Use "IMDBAPI" Wrapper (which actually calls the OMDB API, not the IMDB API)
 ```{r}
 #trial code with a list of 20 films
 
@@ -120,6 +120,7 @@ test <- map_dfr(
 test <- test %>%
   distinct(imdbID, .keep_all = TRUE)
 ```
+
 
 ```{r}
 trial <- list_films[1:20]
