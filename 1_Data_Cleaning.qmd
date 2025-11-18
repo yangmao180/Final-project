@@ -289,7 +289,7 @@ data_6 <- data_6 %>%
 saveRDS(data_6, file = here("data", "data_6.RDS"))
 ```
 
-Run List 7 
+Run List 7 [DONE]
 ```{r}
 data_7 <- map_dfr(
   list_7,
