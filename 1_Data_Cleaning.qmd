@@ -349,7 +349,13 @@ data <- c(
   "data_7",
   "data_8"
 )
-map_dfr(data, ~ readRDS(paste0("data/", .x, ".RDS")))
+
+files <- list.files(
+  "data",
+  pattern = "^data_[0-9]+\\.RDS$",
+  full.names = TRUE
+)
+full_data <- map_dfr(files, readRDS)
 ```
 
 Data cleaning 
