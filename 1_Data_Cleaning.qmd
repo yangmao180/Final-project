@@ -356,6 +356,8 @@ files <- list.files(
   full.names = TRUE
 )
 full_data <- map_dfr(files, readRDS)
+
+saveRDS(full_data, file = here("data", "full_data.RDS"))
 ```
 
 Data cleaning 
