@@ -23,8 +23,6 @@ library(ROMDB)
 ```{r}
 wiki_films <- readRDS("data/wiki_films.RDS")
 clean_wiki_films <- readRDS("data/clean_wiki_films.RDS")
-data_1 <- readRDS("data/data_1.RDS")
-data_7 <- readRDS("data/data_7.RDS")
 ```
 
 3. IF NOT: Creating a directory for local data 
