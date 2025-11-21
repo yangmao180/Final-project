@@ -19,7 +19,7 @@ library(imdbapi)
 library(ROMDB)
 ```
 
-2. IF you already have data: [skip to 6]
+2. IF you already have wiki data: [skip to 6]
 ```{r}
 wiki_films <- readRDS("data/wiki_films.RDS")
 clean_wiki_films <- readRDS("data/clean_wiki_films.RDS")
@@ -337,16 +337,6 @@ saveRDS(data_8, file = here("data", "data_8.RDS"))
 
 Reading in saved data from IMDB API and binding into one large dataset
 ```{r}
-data <- c(
-  "data_1",
-  "data_2",
-  "data_3",
-  "data_4",
-  "data_5",
-  "data_6",
-  "data_7",
-  "data_8"
-)
 
 files <- list.files(
   "data",
