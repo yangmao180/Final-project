@@ -120,18 +120,18 @@ list_films <- clean_wiki_films %>%
 trial <- list_films[1:20]
 
 test <- map_dfr(
-    trial,
-    ~ find_by_title(
-      .x,
-      type = "movie",
-      season = NULL,
-      episode = NULL,
-      year_of_release = NULL,
-      plot = "short",
-      include_tomatoes = FALSE,
-      api_key = omdb_api_key()
-    )
+  trial,
+  ~ find_by_title(
+    .x,
+    type = "movie",
+    season = NULL,
+    episode = NULL,
+    year_of_release = NULL,
+    plot = "short",
+    include_tomatoes = FALSE,
+    api_key = omdb_api_key()
   )
+)
 
 
 #de-duplicates entries
@@ -160,18 +160,18 @@ Run List 1
 
 ```{r}
 data_1 <- map_dfr(
-    list_1,
-    ~ find_by_title(
-      .x,
-      type = "movie",
-      season = NULL,
-      episode = NULL,
-      year_of_release = NULL,
-      plot = "short",
-      include_tomatoes = FALSE,
-      api_key = omdb_api_key()
-    )
+  list_1,
+  ~ find_by_title(
+    .x,
+    type = "movie",
+    season = NULL,
+    episode = NULL,
+    year_of_release = NULL,
+    plot = "short",
+    include_tomatoes = FALSE,
+    api_key = omdb_api_key()
   )
+)
 
 #de-duplicates entries
 data_1 <- data_1 %>%
@@ -184,18 +184,18 @@ Run List 2
 
 ```{r}
 data_2 <- map_dfr(
-    list_2,
-    ~ find_by_title(
-      .x,
-      type = "movie",
-      season = NULL,
-      episode = NULL,
-      year_of_release = NULL,
-      plot = "short",
-      include_tomatoes = FALSE,
-      api_key = omdb_api_key()
-    )
+  list_2,
+  ~ find_by_title(
+    .x,
+    type = "movie",
+    season = NULL,
+    episode = NULL,
+    year_of_release = NULL,
+    plot = "short",
+    include_tomatoes = FALSE,
+    api_key = omdb_api_key()
   )
+)
 
 #de-duplicates entries
 data_2 <- data_2 %>%
@@ -232,18 +232,18 @@ Run List 4
 
 ```{r}
 data_4 <- map_dfr(
-    list_4,
-    ~ find_by_title(
-      .x,
-      type = "movie",
-      season = NULL,
-      episode = NULL,
-      year_of_release = NULL,
-      plot = "short",
-      include_tomatoes = FALSE,
-      api_key = omdb_api_key()
-    )
+  list_4,
+  ~ find_by_title(
+    .x,
+    type = "movie",
+    season = NULL,
+    episode = NULL,
+    year_of_release = NULL,
+    plot = "short",
+    include_tomatoes = FALSE,
+    api_key = omdb_api_key()
   )
+)
 
 #de-duplicates entries
 data_4 <- data_4 %>%
@@ -256,18 +256,18 @@ Run List 5
 
 ```{r}
 data_5 <- map_dfr(
-    list_5,
-    ~ find_by_title(
-      .x,
-      type = "movie",
-      season = NULL,
-      episode = NULL,
-      year_of_release = NULL,
-      plot = "short",
-      include_tomatoes = FALSE,
-      api_key = omdb_api_key()
-    )
+  list_5,
+  ~ find_by_title(
+    .x,
+    type = "movie",
+    season = NULL,
+    episode = NULL,
+    year_of_release = NULL,
+    plot = "short",
+    include_tomatoes = FALSE,
+    api_key = omdb_api_key()
   )
+)
 
 #de-duplicates entries
 data_5 <- data_5 %>%
@@ -280,18 +280,18 @@ Run List 6
 
 ```{r}
 data_6 <- map_dfr(
-    list_6,
-    ~ find_by_title(
-      .x,
-      type = "movie",
-      season = NULL,
-      episode = NULL,
-      year_of_release = NULL,
-      plot = "short",
-      include_tomatoes = FALSE,
-      api_key = omdb_api_key()
-    )
+  list_6,
+  ~ find_by_title(
+    .x,
+    type = "movie",
+    season = NULL,
+    episode = NULL,
+    year_of_release = NULL,
+    plot = "short",
+    include_tomatoes = FALSE,
+    api_key = omdb_api_key()
   )
+)
 
 #de-duplicates entries
 data_6 <- data_6 %>%
@@ -304,18 +304,18 @@ Run List 7
 
 ```{r}
 data_7 <- map_dfr(
-    list_7,
-    ~ find_by_title(
-      .x,
-      type = "movie",
-      season = NULL,
-      episode = NULL,
-      year_of_release = NULL,
-      plot = "short",
-      include_tomatoes = FALSE,
-      api_key = omdb_api_key()
-    )
+  list_7,
+  ~ find_by_title(
+    .x,
+    type = "movie",
+    season = NULL,
+    episode = NULL,
+    year_of_release = NULL,
+    plot = "short",
+    include_tomatoes = FALSE,
+    api_key = omdb_api_key()
   )
+)
 
 #de-duplicates entries
 data_7 <- data_7 %>%
@@ -328,18 +328,18 @@ Run List 8
 
 ```{r}
 data_8 <- map_dfr(
-    list_8,
-    ~ find_by_title(
-      .x,
-      type = "movie",
-      season = NULL,
-      episode = NULL,
-      year_of_release = NULL,
-      plot = "short",
-      include_tomatoes = FALSE,
-      api_key = omdb_api_key()
-    )
+  list_8,
+  ~ find_by_title(
+    .x,
+    type = "movie",
+    season = NULL,
+    episode = NULL,
+    year_of_release = NULL,
+    plot = "short",
+    include_tomatoes = FALSE,
+    api_key = omdb_api_key()
   )
+)
 
 #de-duplicates entries
 data_8 <- data_8 %>%
@@ -348,11 +348,10 @@ data_8 <- data_8 %>%
 saveRDS(data_8, file = here("data", "data_8.RDS"))
 ```
 
-# Final data cleaning
+Final Data Cleaning and Inflation Adjustment
 
+Load necessary libraries
 ```{r}
-
-# 1. Load necessary libraries
 library(tidyverse)
 library(lubridate)
 library(plotly)
@@ -362,12 +361,18 @@ library(scales)
 library(corrplot)
 library(DT)
 library(priceR)
+
 # Set options to avoid scientific notation
 options(scipen = 999)
+```
 
-# 2. Read data
+Read in data
+```{r}
 movies <- readRDS("change to your file path of the movies_clean.rds")
+```
 
+Inflation Adjustment Preparation
+```{r}
 # 3. Pre-download inflation data once
 cat("Downloading inflation data once...\n")
 # Get unique years from the data
@@ -377,7 +382,10 @@ years_needed <- movies %>%
   pull(Year) %>%
   unique() %>%
   sort()
+```
 
+Get inflation factors for each year
+```{r}
 # Create inflation lookup table
 inflation_factors <- data.frame(
   Year = years_needed,
@@ -385,48 +393,52 @@ inflation_factors <- data.frame(
     adjust_for_inflation(1, from_date = y, to_date = 2024, country = "US")
   })
 )
+```
 
+Original data cleaning
+```{r}
 # 4. Data cleaning with pre-calculated inflation adjustment
 movies_clean <- movies %>%
   # Clean year
   mutate(
     Year = as.numeric(Year),
-    
+
     # Clean box office data
     BoxOffice_clean = str_remove_all(BoxOffice, "[\\$,]"),
     BoxOffice_clean = str_trim(BoxOffice_clean),
     BoxOffice_num = suppressWarnings(as.numeric(BoxOffice_clean)),
-    
+
     # Clean runtime
     Runtime_num = as.numeric(str_extract(Runtime, "\\d+")),
-    
+
     # Clean Metascore
     Metascore_num = as.numeric(Metascore),
-    
+
     # Add time features
-    decade = floor(Year/10) * 10,
+    decade = floor(Released_year / 10) * 10,
     era = case_when(
-      Year < 1980 ~ "Classic Era",
-      Year < 2000 ~ "Blockbuster Era",
-      Year < 2010 ~ "Digital Era",
+      Released_year < 2000 ~ "Blockbuster Era",
+      Released_year < 2010 ~ "Digital Era",
       TRUE ~ "Streaming Era"
     )
   ) %>%
   # Filter out movies with missing data
-  filter(!is.na(BoxOffice_num), 
-         BoxOffice_num > 0,
-         !is.na(imdbRating),
-         !is.na(Year),
-         Year >= 1913) %>%
+  filter(
+    !is.na(BoxOffice_num),
+    BoxOffice_num > 0,
+    !is.na(imdbRating),
+    !is.na(Year),
+    Year >= 1913
+  ) %>%
   # Join with pre-calculated inflation factors
   left_join(inflation_factors, by = "Year") %>%
   mutate(
     # Calculate adjusted box office - round to avoid scientific notation
     BoxOffice_adjusted = round(BoxOffice_num * Factor),
-    
+
     # Calculate inflation multiplier
     inflation_multiplier = round(Factor, 2),
-    
+
     # Box office tiers (using adjusted values)
     box_office_tier = case_when(
       BoxOffice_adjusted < 1000000 ~ "< $1M",
@@ -437,7 +449,7 @@ movies_clean <- movies %>%
       BoxOffice_adjusted < 1000000000 ~ "$500M - $1B",
       TRUE ~ "> $1B"
     ),
-    
+
     # Box office tiers (nominal, for comparison)
     box_office_tier_nominal = case_when(
       BoxOffice_num < 1000000 ~ "< $1M",
@@ -448,7 +460,7 @@ movies_clean <- movies %>%
       BoxOffice_num < 1000000000 ~ "$500M - $1B",
       TRUE ~ "> $1B"
     ),
-    
+
     # Rating tiers
     rating_tier = case_when(
       imdbRating < 5 ~ "Poor",
@@ -459,8 +471,91 @@ movies_clean <- movies %>%
   ) %>%
   # Remove the Factor column
   select(-Factor)
+```
 
-# 5. Save the cleaned data with proper formatting
+Additional data cleaning 
+```{r}
+#6. Extract year from Released column and remove those released before 2000 from Released_year column
+
+movies_clean <- movies_clean %>%
+  mutate(
+    Released_year = year(ymd(Released))
+  ) %>%
+  filter(Released_year >= 2000)
+
+#7. Remove original "Year" column to avoid confusion
+movies_clean <- movies_clean %>%
+  select(-Year)
+
+#8. Convert metascore to numeric
+movies_clean <- movies_clean %>%
+  mutate(
+    Metascore = as.numeric(Metascore),
+  ) %>%
+  select(-Metascore_num)
+
+
+#9. Convert rating tier to factor with ordered levels
+movies_clean <- movies_clean %>%
+  mutate(
+    rating_tier = factor(
+      rating_tier,
+      levels = c("Poor", "Average", "Good", "Excellent"),
+      ordered = TRUE
+    )
+  )
+
+#9. Redo the decades and eras based on Released_year column
+movies_clean <- movies_clean %>%
+  mutate(
+    decade = floor(Released_year / 10) * 10,
+    era = case_when(
+      Released_year < 2000 ~ "Blockbuster Era",
+      Released_year < 2010 ~ "Digital Era",
+      TRUE ~ "Streaming Era"
+    )
+  )
+
+#10. box office tier nominal and adjusted as factors with ordered levels
+movies_clean <- movies_clean %>%
+  mutate(
+    box_office_tier_nominal = factor(
+      box_office_tier_nominal,
+      levels = c(
+        "< $1M",
+        "$1M - $10M",
+        "$10M - $50M",
+        "$50M - $100M",
+        "$100M - $500M",
+        "$500M - $1B",
+        "> $1B"
+      ),
+      ordered = TRUE
+    )
+  )
+
+# 10. Rated as factor with ordered levels
+movies_clean <- movies_clean %>%
+  mutate(
+    Rated = factor(
+      Rated,
+      levels = c(
+        "G",
+        "PG",
+        "PG-13",
+        "R",
+        "NC-17",
+        "Not Rated",
+        "Unrated"
+      ),
+      ordered = TRUE
+    )
+  )
+```
+
+Save the cleaned data 
+```{r}
+# 11. Save the cleaned data with proper formatting
 movies_clean_formatted <- movies_clean %>%
   mutate(
     BoxOffice_num = round(BoxOffice_num),
