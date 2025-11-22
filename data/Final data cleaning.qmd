@@ -366,7 +366,7 @@ library(priceR)
 options(scipen = 999)
 
 # 2. Read data
-movies <- readRDS("change to your file path")
+movies <- readRDS("change to your file path of the movies_clean.rds")
 
 # 3. Pre-download inflation data once
 cat("Downloading inflation data once...\n")
