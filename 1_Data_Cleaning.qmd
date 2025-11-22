@@ -572,7 +572,7 @@ movies_clean_formatted <- movies_clean %>%
     BoxOffice_adjusted = round(BoxOffice_adjusted)
   )
 
-saveRDS(movies_clean, "movies_clean.rds")
+saveRDS(movies_clean, "data/movies_clean.RDS")
 ```
 
 

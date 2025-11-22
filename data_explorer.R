@@ -14,21 +14,25 @@ library(ggridges)
 create_overview_cards <- function(data) {
   # Calculate key statistics using adjusted values
   total_movies <- nrow(data)
-  total_revenue <- sum(data$BoxOffice_adjusted, na.rm = TRUE)  # Using adjusted
+  total_revenue <- sum(data$BoxOffice_adjusted, na.rm = TRUE) # Using adjusted
   avg_rating <- mean(data$imdbRating, na.rm = TRUE)
-  date_range <- paste(min(data$Year, na.rm = TRUE), "-", max(data$Year, na.rm = TRUE))
-  
+  date_range <- paste(
+    min(data$Year, na.rm = TRUE),
+    "-",
+    max(data$Year, na.rm = TRUE)
+  )
+
   # Extract unique counts
   all_directors <- unlist(str_split(data$Director, ", "))
   unique_directors <- n_distinct(all_directors[!is.na(all_directors)])
-  
+
   all_genres <- unlist(str_split(data$Genre, ", "))
   unique_genres <- n_distinct(all_genres[!is.na(all_genres)])
-  
+
   # Return as list for display
   list(
     total_movies = comma(total_movies),
-    total_revenue = paste0(dollar(total_revenue), " (2025 adj.)"),  # Indicate adjusted
+    total_revenue = paste0(dollar(total_revenue), " (2025 adj.)"), # Indicate adjusted
     avg_rating = round(avg_rating, 2),
     date_range = date_range,
     unique_directors = comma(unique_directors),
@@ -40,24 +44,58 @@ create_overview_cards <- function(data) {
 create_data_table <- function(data) {
   # Prepare table data with both nominal and adjusted values
   table_data <- data %>%
-    select(Title, Year, Genre, Director, BoxOffice_num, BoxOffice_adjusted, 
-           imdbRating, imdbVotes, Runtime_num, inflation_multiplier) %>%
+    select(
+      Title,
+      Year,
+      Genre,
+      Director,
+      BoxOffice_num,
+      BoxOffice_adjusted,
+      imdbRating,
+      imdbVotes,
+      Runtime_num,
+      inflation_multiplier
+    ) %>%
     mutate(
       # Format nominal box office
       BoxOffice_Nominal = case_when(
         is.na(BoxOffice_num) ~ "N/A",
         BoxOffice_num == 0 ~ "N/A",
-        BoxOffice_num < 1000000 ~ paste0("$", format(round(BoxOffice_num/1000), big.mark = ","), "K"),
-        BoxOffice_num < 1000000000 ~ paste0("$", format(round(BoxOffice_num/1000000, 1), big.mark = ","), "M"),
-        TRUE ~ paste0("$", format(round(BoxOffice_num/1000000000, 2), big.mark = ","), "B")
+        BoxOffice_num < 1000000 ~ paste0(
+          "$",
+          format(round(BoxOffice_num / 1000), big.mark = ","),
+          "K"
+        ),
+        BoxOffice_num < 1000000000 ~ paste0(
+          "$",
+          format(round(BoxOffice_num / 1000000, 1), big.mark = ","),
+          "M"
+        ),
+        TRUE ~ paste0(
+          "$",
+          format(round(BoxOffice_num / 1000000000, 2), big.mark = ","),
+          "B"
+        )
       ),
       # Format adjusted box office
       BoxOffice_Adj = case_when(
         is.na(BoxOffice_adjusted) ~ "N/A",
         BoxOffice_adjusted == 0 ~ "N/A",
-        BoxOffice_adjusted < 1000000 ~ paste0("$", format(round(BoxOffice_adjusted/1000), big.mark = ","), "K"),
-        BoxOffice_adjusted < 1000000000 ~ paste0("$", format(round(BoxOffice_adjusted/1000000, 1), big.mark = ","), "M"),
-        TRUE ~ paste0("$", format(round(BoxOffice_adjusted/1000000000, 2), big.mark = ","), "B")
+        BoxOffice_adjusted < 1000000 ~ paste0(
+          "$",
+          format(round(BoxOffice_adjusted / 1000), big.mark = ","),
+          "K"
+        ),
+        BoxOffice_adjusted < 1000000000 ~ paste0(
+          "$",
+          format(round(BoxOffice_adjusted / 1000000, 1), big.mark = ","),
+          "M"
+        ),
+        TRUE ~ paste0(
+          "$",
+          format(round(BoxOffice_adjusted / 1000000000, 2), big.mark = ","),
+          "B"
+        )
       ),
       # Format rating
       IMDb_Rating = round(imdbRating, 1),
@@ -67,9 +105,19 @@ create_data_table <- function(data) {
       # Inflation factor
       `Inflation Factor` = paste0("×", inflation_multiplier)
     ) %>%
-    select(Title, Year, Genre, Director, BoxOffice_Nominal, BoxOffice_Adj, 
-           `Inflation Factor`, IMDb_Rating, Votes, Runtime)
-  
+    select(
+      Title,
+      Year,
+      Genre,
+      Director,
+      BoxOffice_Nominal,
+      BoxOffice_Adj,
+      `Inflation Factor`,
+      IMDb_Rating,
+      Votes,
+      Runtime
+    )
+
   # Create data table
   datatable(
     table_data,
@@ -85,9 +133,18 @@ create_data_table <- function(data) {
         list(className = 'dt-right', targets = c(4, 5))
       )
     ),
-    colnames = c('Title', 'Year', 'Genres', 'Director(s)', 
-                 'Box Office (Nominal)', 'Box Office (2024 adj.)', 
-                 'Inflation', 'IMDb Rating', 'Votes', 'Runtime')
+    colnames = c(
+      'Title',
+      'Year',
+      'Genres',
+      'Director(s)',
+      'Box Office (Nominal)',
+      'Box Office (2024 adj.)',
+      'Inflation',
+      'IMDb Rating',
+      'Votes',
+      'Runtime'
+    )
   ) %>%
     formatStyle(
       'IMDb_Rating',
@@ -104,25 +161,37 @@ create_genre_treemap <- function(data) {
     separate_rows(Genre, sep = ", ") %>%
     group_by(Genre) %>%
     summarise(
-      total_revenue = sum(BoxOffice_adjusted, na.rm = TRUE),  # Using adjusted
+      total_revenue = sum(BoxOffice_adjusted, na.rm = TRUE), # Using adjusted
       movie_count = n(),
       avg_rating = mean(imdbRating, na.rm = TRUE),
       .groups = "drop"
     ) %>%
     filter(movie_count >= 10) %>%
     mutate(
-      label = paste(Genre, "\n",
-                    "$", round(total_revenue/1e9, 1), "B\n",
-                    movie_count, " movies\n",
-                    "★", round(avg_rating, 1))
+      label = paste(
+        Genre,
+        "\n",
+        "$",
+        round(total_revenue / 1e9, 1),
+        "B\n",
+        movie_count,
+        " movies\n",
+        "★",
+        round(avg_rating, 1)
+      )
     )
-  
-  ggplot(genre_stats, aes(area = total_revenue, fill = avg_rating, label = label)) +
+
+  ggplot(
+    genre_stats,
+    aes(area = total_revenue, fill = avg_rating, label = label)
+  ) +
     geom_treemap() +
     geom_treemap_text(colour = "white", place = "centre", size = 12) +
     scale_fill_viridis(name = "Avg Rating", option = "plasma") +
-    labs(title = "Genre Universe: Box Office Dominance (Inflation-Adjusted)",
-         subtitle = "Size = Total Revenue (2024 dollars) | Color = Average Rating") +
+    labs(
+      title = "Genre Universe: Box Office Dominance (Inflation-Adjusted)",
+      subtitle = "Size = Total Revenue (2024 dollars) | Color = Average Rating"
+    ) +
     theme_minimal()
 }
 
@@ -131,35 +200,48 @@ create_box_office_distribution <- function(data) {
   # Adjusted distribution
   p1 <- data %>%
     filter(BoxOffice_adjusted > 0) %>%
-    ggplot(aes(x = BoxOffice_adjusted/1e6)) +
+    ggplot(aes(x = BoxOffice_adjusted / 1e6)) +
     geom_histogram(bins = 50, fill = "steelblue", alpha = 0.8) +
     scale_x_log10(
       breaks = c(0.1, 1, 10, 100, 1000, 10000),
       labels = c("0.1", "1", "10", "100", "1K", "10K")
     ) +
-    labs(title = "Box Office Distribution - Inflation Adjusted (2024 dollars)",
-         x = "Box Office (Million USD)",
-         y = "Number of Movies") +
+    labs(
+      title = "Box Office Distribution - Inflation Adjusted (2024 dollars)",
+      x = "Box Office (Million USD)",
+      y = "Number of Movies"
+    ) +
     theme_minimal()
-  
+
   # Ridge plot by era - using adjusted values
   p2 <- data %>%
     filter(BoxOffice_adjusted > 0) %>%
-    mutate(era = factor(era, levels = c("Classic Era", "Blockbuster Era", 
-                                        "Digital Era", "Streaming Era"))) %>%
-    ggplot(aes(x = BoxOffice_adjusted/1e6, y = era, fill = era)) +
+    mutate(
+      era = factor(
+        era,
+        levels = c(
+          "Classic Era",
+          "Blockbuster Era",
+          "Digital Era",
+          "Streaming Era"
+        )
+      )
+    ) %>%
+    ggplot(aes(x = BoxOffice_adjusted / 1e6, y = era, fill = era)) +
     geom_density_ridges(alpha = 0.8, scale = 2) +
     scale_x_log10(
       breaks = c(0.1, 1, 10, 100, 1000, 10000),
       labels = c("$0.1M", "$1M", "$10M", "$100M", "$1B", "$10B")
     ) +
     scale_fill_viridis_d() +
-    labs(title = "Box Office Distribution by Era (Inflation-Adjusted)",
-         x = "Box Office Revenue (2024 dollars, log scale)",
-         y = "") +
+    labs(
+      title = "Box Office Distribution by Era (Inflation-Adjusted)",
+      x = "Box Office Revenue (2024 dollars, log scale)",
+      y = ""
+    ) +
     theme_minimal() +
     theme(legend.position = "none")
-  
+
   return(list(histogram = p1, ridges = p2))
 }
 
@@ -171,13 +253,15 @@ create_rating_evolution <- function(data) {
     ggplot(aes(x = imdbRating, y = decade, fill = decade)) +
     geom_density_ridges(alpha = 0.8, scale = 2.5) +
     scale_fill_viridis_d() +
-    labs(title = "Evolution of Movie Ratings by Decade",
-         subtitle = "How audience standards have changed over time",
-         x = "IMDb Rating",
-         y = "Decade") +
+    labs(
+      title = "Evolution of Movie Ratings by Decade",
+      subtitle = "How audience standards have changed over time",
+      x = "IMDb Rating",
+      y = "Decade"
+    ) +
     theme_minimal() +
     theme(legend.position = "none")
-  
+
   return(rating_plot)
 }
 
@@ -192,25 +276,30 @@ create_seasonal_analysis <- function(data) {
     ) %>%
     group_by(month) %>%
     summarise(
-      avg_revenue = mean(BoxOffice_adjusted, na.rm = TRUE)/1e6,  # Using adjusted
+      avg_revenue = mean(BoxOffice_adjusted, na.rm = TRUE) / 1e6, # Using adjusted
       movie_count = n(),
       avg_rating = mean(imdbRating, na.rm = TRUE),
-      blockbuster_pct = sum(BoxOffice_adjusted > 500000000, na.rm = TRUE) / n() * 100,  # Adjusted threshold
+      blockbuster_pct = sum(BoxOffice_adjusted > 500000000, na.rm = TRUE) /
+        n() *
+        100, # Adjusted threshold
       .groups = "drop"
     )
-  
+
   polar_plot <- seasonal_data %>%
     ggplot(aes(x = month)) +
     geom_col(aes(y = avg_revenue, fill = avg_rating), width = 0.9) +
     geom_text(aes(y = avg_revenue + 5, label = movie_count), size = 3) +
     coord_polar() +
     scale_fill_viridis(name = "Avg Rating") +
-    labs(title = "Seasonal Movie Release Patterns (Inflation-Adjusted)",
-         subtitle = "Bar height = Average Revenue (2024 dollars) | Numbers = Movie Count",
-         x = "", y = "Average Revenue (Million USD)") +
+    labs(
+      title = "Seasonal Movie Release Patterns (Inflation-Adjusted)",
+      subtitle = "Bar height = Average Revenue (2024 dollars) | Numbers = Movie Count",
+      x = "",
+      y = "Average Revenue (Million USD)"
+    ) +
     theme_minimal() +
     theme(axis.text.y = element_blank())
-  
+
   return(polar_plot)
 }
 
@@ -218,45 +307,48 @@ create_seasonal_analysis <- function(data) {
 create_collaboration_network <- function(data, min_collaborations = 3) {
   collaborations <- data %>%
     mutate(
-      primary_director = str_split(Director, ", ", simplify = TRUE)[,1],
-      primary_actor = str_split(Actors, ", ", simplify = TRUE)[,1]
+      primary_director = str_split(Director, ", ", simplify = TRUE)[, 1],
+      primary_actor = str_split(Actors, ", ", simplify = TRUE)[, 1]
     ) %>%
-    filter(!is.na(primary_director), !is.na(primary_actor),
-           primary_director != "", primary_actor != "") %>%
+    filter(
+      !is.na(primary_director),
+      !is.na(primary_actor),
+      primary_director != "",
+      primary_actor != ""
+    ) %>%
     group_by(primary_director, primary_actor) %>%
     summarise(
       collaborations = n(),
-      total_revenue = sum(BoxOffice_adjusted, na.rm = TRUE),  # Using adjusted
+      total_revenue = sum(BoxOffice_adjusted, na.rm = TRUE), # Using adjusted
       avg_rating = mean(imdbRating, na.rm = TRUE),
       .groups = "drop"
     ) %>%
     filter(collaborations >= min_collaborations) %>%
-    arrange(desc(total_revenue)) %>%  # Sort by adjusted revenue
+    arrange(desc(total_revenue)) %>% # Sort by adjusted revenue
     head(30)
-  
+
   directors <- unique(collaborations$primary_director)
   actors <- unique(collaborations$primary_actor)
-  
+
   nodes <- data.frame(
     name = c(directors, actors),
-    group = c(rep("Director", length(directors)), 
-              rep("Actor", length(actors))),
+    group = c(rep("Director", length(directors)), rep("Actor", length(actors))),
     size = c(rep(20, length(directors)), rep(15, length(actors)))
   )
-  
+
   links <- collaborations %>%
     mutate(
       source = match(primary_director, nodes$name) - 1,
       target = match(primary_actor, nodes$name) - 1,
       value = collaborations * 3
     )
-  
+
   network <- forceNetwork(
-    Links = links, 
+    Links = links,
     Nodes = nodes,
-    Source = "source", 
+    Source = "source",
     Target = "target",
-    Value = "value", 
+    Value = "value",
     NodeID = "name",
     Group = "group",
     Nodesize = "size",
@@ -269,9 +361,11 @@ create_collaboration_network <- function(data, min_collaborations = 3) {
     charge = -300,
     bounded = TRUE,
     opacityNoHover = 0.7,
-    colourScale = JS('d3.scaleOrdinal().domain(["Director", "Actor"]).range(["#FF6B6B", "#4ECDC4"])')
+    colourScale = JS(
+      'd3.scaleOrdinal().domain(["Director", "Actor"]).range(["#FF6B6B", "#4ECDC4"])'
+    )
   )
-  
+
   return(network)
 }
 
@@ -281,29 +375,32 @@ create_genre_combinations <- function(data) {
     filter(str_detect(Genre, ", ")) %>%
     mutate(
       genre_count = str_count(Genre, ", ") + 1,
-      primary_genre = str_split(Genre, ", ", simplify = TRUE)[,1],
-      secondary_genre = str_split(Genre, ", ", simplify = TRUE)[,2]
+      primary_genre = str_split(Genre, ", ", simplify = TRUE)[, 1],
+      secondary_genre = str_split(Genre, ", ", simplify = TRUE)[, 2]
     ) %>%
     filter(!is.na(secondary_genre), secondary_genre != "") %>%
     group_by(primary_genre, secondary_genre) %>%
     summarise(
       count = n(),
-      avg_revenue = mean(BoxOffice_adjusted, na.rm = TRUE),  # Using adjusted
+      avg_revenue = mean(BoxOffice_adjusted, na.rm = TRUE), # Using adjusted
       avg_rating = mean(imdbRating, na.rm = TRUE),
       .groups = "drop"
     ) %>%
     filter(count >= 5)
-  
+
   heatmap <- ggplot(genre_combos, aes(x = primary_genre, y = secondary_genre)) +
-    geom_tile(aes(fill = avg_revenue/1e6)) +
+    geom_tile(aes(fill = avg_revenue / 1e6)) +
     geom_text(aes(label = round(avg_rating, 1)), size = 3) +
     scale_fill_viridis(name = "Avg Revenue\n(2024 Million $)") +
-    labs(title = "Genre Combination Success Matrix (Inflation-Adjusted)",
-         subtitle = "Color = Average Revenue (2024 dollars) | Numbers = Average Rating",
-         x = "Primary Genre", y = "Secondary Genre") +
+    labs(
+      title = "Genre Combination Success Matrix (Inflation-Adjusted)",
+      subtitle = "Color = Average Revenue (2024 dollars) | Numbers = Average Rating",
+      x = "Primary Genre",
+      y = "Secondary Genre"
+    ) +
     theme_minimal() +
     theme(axis.text.x = element_text(angle = 45, hjust = 1))
-  
+
   return(heatmap)
 }
 
@@ -313,16 +410,16 @@ create_time_series_analysis <- function(data) {
   yearly_stats <- data %>%
     group_by(Year) %>%
     summarise(
-      total_revenue = sum(BoxOffice_adjusted, na.rm = TRUE)/1e9,  # Using adjusted
-      avg_revenue = mean(BoxOffice_adjusted, na.rm = TRUE)/1e6,   # Using adjusted
+      total_revenue = sum(BoxOffice_adjusted, na.rm = TRUE) / 1e9, # Using adjusted
+      avg_revenue = mean(BoxOffice_adjusted, na.rm = TRUE) / 1e6, # Using adjusted
       movie_count = n(),
       avg_rating = mean(imdbRating, na.rm = TRUE),
-      top_movie = first(Title[order(BoxOffice_adjusted, decreasing = TRUE)]),  # Sort by adjusted
-      top_revenue = max(BoxOffice_adjusted, na.rm = TRUE)/1e6,  # Using adjusted
+      top_movie = first(Title[order(BoxOffice_adjusted, decreasing = TRUE)]), # Sort by adjusted
+      top_revenue = max(BoxOffice_adjusted, na.rm = TRUE) / 1e6, # Using adjusted
       .groups = "drop"
     ) %>%
-    filter(Year >= 1980)  # Focus on modern era
-  
+    filter(Year >= 1980) # Focus on modern era
+
   # Create interactive time series
   time_series_plot <- plot_ly(yearly_stats) %>%
     add_trace(
@@ -333,15 +430,25 @@ create_time_series_analysis <- function(data) {
       name = "Total Revenue (2024 adj.)",
       line = list(color = "darkblue", width = 3),
       marker = list(size = 8),
-      text = ~paste("Year:", Year, "<br>",
-                    "Total Revenue: $", round(total_revenue, 2), "B<br>",
-                    "Top Movie: ", top_movie, "<br>",
-                    "Top Revenue: $", round(top_revenue, 1), "M"),
+      text = ~ paste(
+        "Year:",
+        Year,
+        "<br>",
+        "Total Revenue: $",
+        round(total_revenue, 2),
+        "B<br>",
+        "Top Movie: ",
+        top_movie,
+        "<br>",
+        "Top Revenue: $",
+        round(top_revenue, 1),
+        "M"
+      ),
       hovertemplate = "%{text}<extra></extra>"
     ) %>%
     add_trace(
       x = ~Year,
-      y = ~movie_count/100,  # Scale for visibility
+      y = ~ movie_count / 100, # Scale for visibility
       type = "scatter",
       mode = "lines+markers",
       name = "Movie Count (÷100)",
@@ -381,7 +488,7 @@ create_time_series_analysis <- function(data) {
       ),
       hovermode = "x unified"
     )
-  
+
   return(time_series_plot)
 }
 
@@ -389,40 +496,45 @@ create_time_series_analysis <- function(data) {
 create_top_performers <- function(data) {
   # Top movies by adjusted revenue
   top_revenue <- data %>%
-    arrange(desc(BoxOffice_adjusted)) %>%  # Using adjusted
+    arrange(desc(BoxOffice_adjusted)) %>% # Using adjusted
     head(20) %>%
     mutate(rank = row_number())
-  
+
   # Top movies by rating (with minimum votes)
   top_rated <- data %>%
-    filter(imdbVotes > 50000) %>%  # Ensure popularity
+    filter(imdbVotes > 50000) %>% # Ensure popularity
     arrange(desc(imdbRating)) %>%
     head(20) %>%
     mutate(rank = row_number())
-  
+
   # Create lollipop chart for revenue
-  revenue_lollipop <- ggplot(top_revenue, aes(x = reorder(Title, BoxOffice_adjusted), 
-                                              y = BoxOffice_adjusted/1e6)) +  # Using adjusted
+  revenue_lollipop <- ggplot(
+    top_revenue,
+    aes(x = reorder(Title, BoxOffice_adjusted), y = BoxOffice_adjusted / 1e6)
+  ) + # Using adjusted
     geom_segment(aes(xend = Title, yend = 0), color = "gray70", size = 1) +
     geom_point(aes(color = imdbRating), size = 4) +
     coord_flip() +
     scale_color_viridis(name = "IMDb Rating") +
-    labs(title = "Top 20 Movies by Box Office Revenue (Inflation-Adjusted)",
-         subtitle = "All values in 2024 dollars",
-         x = "", y = "Box Office (Million USD)") +
+    labs(
+      title = "Top 20 Movies by Box Office Revenue (Inflation-Adjusted)",
+      subtitle = "All values in 2024 dollars",
+      x = "",
+      y = "Box Office (Million USD)"
+    ) +
     theme_minimal() +
     theme(panel.grid.major.y = element_blank())
-  
+
   # Create rating comparison
   rating_comparison <- plot_ly() %>%
     add_trace(
       data = top_rated,
       x = ~imdbRating,
-      y = ~reorder(Title, imdbRating),
+      y = ~ reorder(Title, imdbRating),
       type = "bar",
       orientation = "h",
-      marker = list(color = ~log10(imdbVotes), colorscale = "Viridis"),
-      text = ~paste("Votes:", comma(imdbVotes)),
+      marker = list(color = ~ log10(imdbVotes), colorscale = "Viridis"),
+      text = ~ paste("Votes:", comma(imdbVotes)),
       name = "Rating"
     ) %>%
     layout(
@@ -431,14 +543,14 @@ create_top_performers <- function(data) {
       yaxis = list(title = ""),
       showlegend = FALSE
     )
-  
+
   return(list(revenue = revenue_lollipop, rating = rating_comparison))
 }
 
 # 13. INTERACTIVE DASHBOARD COMPONENTS
 create_summary_boxes <- function(data) {
   stats <- create_overview_cards(data)
-  
+
   # Create HTML boxes for flexdashboard
   boxes <- list(
     total_movies = div(
@@ -462,48 +574,63 @@ create_summary_boxes <- function(data) {
       div(class = "caption", "Year Range")
     )
   )
-  
+
   return(boxes)
 }
 
 # 14. EXPORT FUNCTIONS
-save_all_visualizations <- function(data, output_dir = "data_explorer_outputs/") {
+save_all_visualizations <- function(
+  data,
+  output_dir = "data_explorer_outputs/"
+) {
   # Create directory if it doesn't exist
   if (!dir.exists(output_dir)) {
     dir.create(output_dir)
   }
-  
+
   # Generate all visualizations
   cat("Generating visualizations...\n")
-  
+
   # Save static plots
-  ggsave(paste0(output_dir, "genre_treemap.png"), 
-         create_genre_treemap(data), 
-         width = 12, height = 8)
-  
-  ggsave(paste0(output_dir, "rating_evolution.png"), 
-         create_rating_evolution(data), 
-         width = 10, height = 8)
-  
-  ggsave(paste0(output_dir, "seasonal_patterns.png"), 
-         create_seasonal_analysis(data), 
-         width = 10, height = 10)
-  
-  ggsave(paste0(output_dir, "genre_combinations.png"), 
-         create_genre_combinations(data), 
-         width = 12, height = 10)
-  
+  ggsave(
+    paste0(output_dir, "genre_treemap.png"),
+    create_genre_treemap(data),
+    width = 12,
+    height = 8
+  )
+
+  ggsave(
+    paste0(output_dir, "rating_evolution.png"),
+    create_rating_evolution(data),
+    width = 10,
+    height = 8
+  )
+
+  ggsave(
+    paste0(output_dir, "seasonal_patterns.png"),
+    create_seasonal_analysis(data),
+    width = 10,
+    height = 10
+  )
+
+  ggsave(
+    paste0(output_dir, "genre_combinations.png"),
+    create_genre_combinations(data),
+    width = 12,
+    height = 10
+  )
+
   # Save interactive plots as HTML
   htmlwidgets::saveWidget(
     create_collaboration_network(data),
     paste0(output_dir, "collaboration_network.html")
   )
-  
+
   htmlwidgets::saveWidget(
     create_time_series_analysis(data),
     paste0(output_dir, "time_series.html")
   )
-  
+
   cat("All visualizations saved to", output_dir, "\n")
 }
 
@@ -518,7 +645,7 @@ run_data_explorer <- function(data_path = "movies_clean.rds") {
   } else {
     stop("Data file must be .rds or .csv format")
   }
-  
+
   # Generate all components
   components <- list(
     overview = create_overview_cards(data),
@@ -532,10 +659,10 @@ run_data_explorer <- function(data_path = "movies_clean.rds") {
     time_series = create_time_series_analysis(data),
     top_performers = create_top_performers(data)
   )
-  
+
   # Save outputs
   save_all_visualizations(data)
-  
+
   return(components)
 }
 
@@ -546,27 +673,27 @@ create_genre_flow_diagram <- function(data) {
   # Prepare flow data
   genre_flow <- data %>%
     mutate(
-      decade = paste0(floor(Year/10)*10, "s"),
-      primary_genre = str_split(Genre, ", ", simplify = TRUE)[,1]
+      decade = paste0(floor(Year / 10) * 10, "s"),
+      primary_genre = str_split(Genre, ", ", simplify = TRUE)[, 1]
     ) %>%
     filter(!is.na(decade), !is.na(primary_genre)) %>%
     group_by(decade, primary_genre) %>%
     summarise(
       count = n(),
-      revenue = sum(BoxOffice_adjusted, na.rm = TRUE) / 1e9,  # Using adjusted
+      revenue = sum(BoxOffice_adjusted, na.rm = TRUE) / 1e9, # Using adjusted
       .groups = "drop"
     ) %>%
     filter(count >= 5)
-  
+
   # Create nodes
   decades <- unique(genre_flow$decade)
   genres <- unique(genre_flow$primary_genre)
-  
+
   nodes <- data.frame(
     name = c(decades, genres),
     stringsAsFactors = FALSE
   )
-  
+
   # Create links
   links <- genre_flow %>%
     mutate(
@@ -574,15 +701,17 @@ create_genre_flow_diagram <- function(data) {
       target = match(primary_genre, nodes$name) - 1,
       value = revenue
     )
-  
+
   # Create sankey diagram
   fig <- plot_ly(
     type = "sankey",
     orientation = "h",
     node = list(
       label = nodes$name,
-      color = c(rep("lightblue", length(decades)), 
-                rep("lightcoral", length(genres))),
+      color = c(
+        rep("lightblue", length(decades)),
+        rep("lightcoral", length(genres))
+      ),
       pad = 15,
       thickness = 20,
       line = list(color = "black", width = 0.5)
@@ -599,7 +728,7 @@ create_genre_flow_diagram <- function(data) {
       title = "Genre Revenue Flow by Decade (Inflation-Adjusted)",
       font = list(size = 12)
     )
-  
+
   return(fig)
 }
 
@@ -610,16 +739,16 @@ create_interactive_heatmap <- function(data) {
     filter(!is.na(Released)) %>%
     mutate(
       month = month(Released, label = TRUE),
-      primary_genre = str_split(Genre, ", ", simplify = TRUE)[,1]
+      primary_genre = str_split(Genre, ", ", simplify = TRUE)[, 1]
     ) %>%
     group_by(month, primary_genre) %>%
     summarise(
-      avg_revenue = mean(BoxOffice_adjusted, na.rm = TRUE) / 1e6,  # Using adjusted
+      avg_revenue = mean(BoxOffice_adjusted, na.rm = TRUE) / 1e6, # Using adjusted
       movie_count = n(),
       .groups = "drop"
     ) %>%
     filter(!is.na(month), !is.na(primary_genre))
-  
+
   # Create interactive heatmap
   fig <- plot_ly(
     data = heatmap_data,
@@ -650,7 +779,7 @@ create_interactive_heatmap <- function(data) {
         textangle = 90
       )
     )
-  
+
   return(fig)
 }
 
@@ -658,23 +787,36 @@ create_interactive_heatmap <- function(data) {
 create_3d_movie_space <- function(data) {
   # Prepare data
   plot_data <- data %>%
-    filter(!is.na(BoxOffice_adjusted), !is.na(imdbRating), !is.na(Runtime_num)) %>%
-    sample_n(min(500, nrow(.))) %>%  # Limit data points for performance
+    filter(
+      !is.na(BoxOffice_adjusted),
+      !is.na(imdbRating),
+      !is.na(Runtime_num)
+    ) %>%
+    sample_n(min(500, nrow(.))) %>% # Limit data points for performance
     mutate(
       hover_text = paste(
-        "<b>", Title, "</b><br>",
-        "Revenue: $", format(BoxOffice_adjusted, big.mark = ","), " (2024 adj.)<br>",
-        "Rating: ", imdbRating, "<br>",
-        "Runtime: ", Runtime_num, " min<br>",
-        "Genre: ", Genre
+        "<b>",
+        Title,
+        "</b><br>",
+        "Revenue: $",
+        format(BoxOffice_adjusted, big.mark = ","),
+        " (2024 adj.)<br>",
+        "Rating: ",
+        imdbRating,
+        "<br>",
+        "Runtime: ",
+        Runtime_num,
+        " min<br>",
+        "Genre: ",
+        Genre
       )
     )
-  
+
   # Create 3D scatter plot
   fig <- plot_ly(
     plot_data,
     x = ~imdbRating,
-    y = ~log10(BoxOffice_adjusted),  # Using adjusted
+    y = ~ log10(BoxOffice_adjusted), # Using adjusted
     z = ~Runtime_num,
     color = ~Genre,
     text = ~hover_text,
@@ -699,14 +841,16 @@ create_3d_movie_space <- function(data) {
       ),
       showlegend = TRUE
     )
-  
+
   return(fig)
 }
 
 
 # Print completion message
 cat("\nData Explorer module loaded successfully!\n")
-cat("Run 'components <- run_data_explorer(\"movies_clean.rds\")' to generate all visualizations.\n")
+cat(
+  "Run 'components <- run_data_explorer(\"movies_clean.rds\")' to generate all visualizations.\n"
+)
 
 # Create switchable timeline - Using adjusted values
 create_switchable_timeline <- function(data) {
@@ -715,14 +859,14 @@ create_switchable_timeline <- function(data) {
     group_by(Year) %>%
     summarise(
       Movies = n(),
-      Revenue = sum(BoxOffice_adjusted, na.rm = TRUE) / 1e9,  # Using adjusted
+      Revenue = sum(BoxOffice_adjusted, na.rm = TRUE) / 1e9, # Using adjusted
       `Avg Rating` = mean(imdbRating, na.rm = TRUE),
       `Avg Runtime` = mean(Runtime_num, na.rm = TRUE),
       .groups = "drop"
     ) %>%
     filter(Year >= 1990) %>%
     pivot_longer(cols = -Year, names_to = "Metric", values_to = "Value")
-  
+
   # Create chart
   fig <- plot_ly(yearly_data, x = ~Year, y = ~Value, color = ~Metric) %>%
     add_lines(
@@ -769,7 +913,7 @@ create_switchable_timeline <- function(data) {
         )
       )
     )
-  
+
   return(fig)
 }
 
@@ -824,26 +968,42 @@ css_styles <- "
 # Compare nominal vs adjusted revenue
 create_inflation_comparison <- function(data) {
   comparison_data <- data %>%
-    select(Title, Year, BoxOffice_num, BoxOffice_adjusted, inflation_multiplier) %>%
+    select(
+      Title,
+      Year,
+      BoxOffice_num,
+      BoxOffice_adjusted,
+      inflation_multiplier
+    ) %>%
     arrange(desc(BoxOffice_adjusted - BoxOffice_num)) %>%
     head(20) %>%
     mutate(
       difference = BoxOffice_adjusted - BoxOffice_num,
-      pct_increase = ((BoxOffice_adjusted - BoxOffice_num) / BoxOffice_num) * 100
+      pct_increase = ((BoxOffice_adjusted - BoxOffice_num) / BoxOffice_num) *
+        100
     )
-  
+
   p <- ggplot(comparison_data, aes(x = reorder(Title, difference))) +
-    geom_segment(aes(xend = Title, y = BoxOffice_num/1e6, yend = BoxOffice_adjusted/1e6),
-                 color = "gray50", size = 1) +
-    geom_point(aes(y = BoxOffice_num/1e6), color = "#FF6B6B", size = 3) +
-    geom_point(aes(y = BoxOffice_adjusted/1e6), color = "#4ECDC4", size = 3) +
+    geom_segment(
+      aes(
+        xend = Title,
+        y = BoxOffice_num / 1e6,
+        yend = BoxOffice_adjusted / 1e6
+      ),
+      color = "gray50",
+      size = 1
+    ) +
+    geom_point(aes(y = BoxOffice_num / 1e6), color = "#FF6B6B", size = 3) +
+    geom_point(aes(y = BoxOffice_adjusted / 1e6), color = "#4ECDC4", size = 3) +
     coord_flip() +
-    labs(title = "Impact of Inflation Adjustment on Box Office Revenue",
-         subtitle = "Red = Nominal, Blue = 2024 Adjusted",
-         x = "",
-         y = "Box Office (Million USD)") +
+    labs(
+      title = "Impact of Inflation Adjustment on Box Office Revenue",
+      subtitle = "Red = Nominal, Blue = 2024 Adjusted",
+      x = "",
+      y = "Box Office (Million USD)"
+    ) +
     theme_minimal()
-  
+
   return(p)
 }
 
@@ -862,6 +1022,6 @@ generate_summary_stats <- function(data) {
     top_grossing_movie = data$Title[which.max(data$BoxOffice_adjusted)],
     top_rated_movie = data$Title[which.max(data$imdbRating)]
   )
-  
+
   return(stats)
 }
