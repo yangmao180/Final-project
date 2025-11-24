@@ -1,10 +1,427 @@
 ---
-title: "Project 4: Data Visualization & Analysis"
-format: html
+title: "Movie Data Dashboard"
+format: 
+    dashboard:
+        css: styles.scss
 ---
+
+```{r}
+#| label: load-packages
+#| message: false
+#| echo: false
+
+#Load required packages
+library(tidyverse)
+library(plotly)
+library(DT)
+library(viridis)
+library(treemapify)
+library(ggwordcloud)
+library(networkD3)
+library(scales)
+library(lubridate)
+library(ggridges)
+library(stringr)
+library(flexdashboard)
+```
+
+```{r}
+#| label: load-data
+#| message: false
+# Read in data
+movies_clean <- read_rds("data/movies_clean.rds")
+```
+
+```{r}
+#| warning: false
+create_overview_cards <- function(data) {
+  # Calculate key statistics using adjusted values
+  total_movies <- nrow(data)
+  total_revenue <- sum(data$BoxOffice_adjusted, na.rm = TRUE) # Using adjusted
+  avg_rating <- mean(data$imdbRating, na.rm = TRUE)
+  date_range <- paste(
+    min(data$Released_year, na.rm = TRUE),
+    "-",
+    max(data$Released_year, na.rm = TRUE)
+  )
+
+  # Extract unique counts
+  all_directors <- unlist(str_split(data$Director, ", "))
+  unique_directors <- n_distinct(all_directors[!is.na(all_directors)])
+
+  all_genres <- unlist(str_split(data$Genre, ", "))
+  unique_genres <- n_distinct(all_genres[!is.na(all_genres)])
+
+  # Return as list for display
+  list(
+    total_movies = total_movies,
+    total_revenue = dollar(total_revenue),
+    avg_rating = round(avg_rating, 2),
+    date_range = date_range,
+    unique_directors = (unique_directors),
+    unique_genres = unique_genres
+  )
+}
+
+cards <- create_overview_cards(movies_clean)
+```
+
+
+# Home
+
+
+# Overview
+
+## Row {height="15%"}
+
+```{r}
+#| component: valuebox
+#| title: "Total Movies"
+#| width: 1/4
+list(
+  icon = "film",
+  color = "primary",
+  value = cards$total_movies
+)
+```
+
+```{r}
+#| component: valuebox
+#| title: "Total Revenue in 2025 Adjusted Dollars"
+list(
+  icon = "piggy-bank",
+  color = "primary",
+  value = cards$total_revenue
+)
+```
+
+```{r}
+#| component: valuebox
+#| title: "Average IMDB Rating"
+list(
+  icon = "star",
+  color = "primary",
+  value = cards$avg_rating
+)
+```
+
+```{r}
+#| component: valuebox
+#| title: "Date Range of Released Movies"
+list(
+  icon = "calendar4-week",
+  color = "primary",
+  value = cards$date_range
+)
+```
+
+## Row {height="30%"}
+
+```{r}
+# | title: "Genre Universe: Box Office Dominance (Inflation-Adjusted)"
+create_genre_treemap <- function(data) {
+  genre_stats <- data %>%
+    separate_rows(Genre, sep = ", ") %>%
+    group_by(Genre) %>%
+    summarise(
+      total_revenue = sum(BoxOffice_adjusted, na.rm = TRUE), # Using adjusted
+      movie_count = n(),
+      avg_rating = mean(imdbRating, na.rm = TRUE),
+      .groups = "drop"
+    ) %>%
+    filter(movie_count >= 10) %>%
+    mutate(
+      label = paste(
+        Genre,
+        "\n",
+        "$",
+        round(total_revenue / 1e9, 1),
+        "B\n",
+        movie_count,
+        " movies\n",
+        "★",
+        round(avg_rating, 1)
+      )
+    )
+
+  ggplot(
+    genre_stats,
+    aes(area = total_revenue, fill = avg_rating, label = label)
+  ) +
+    geom_treemap() +
+    geom_treemap_text(colour = "white", place = "centre", size = 12) +
+    scale_fill_viridis(name = "Avg Rating", option = "plasma") +
+    labs(
+      subtitle = "Size = Total Revenue (2024 dollars) | Color = Average Rating"
+    ) +
+    theme_minimal()
+}
+```
+
+```{r}
+#| title: "Genre Universe: Box Office Dominance (Inflation-Adjusted)"
+#| warning: false
+#| message: false
+
+genre_treemap <- create_genre_treemap(movies_clean)
+genre_treemap
+```
 
 ```{r}
 
 ```
 
+# Movie Explorer 
+## Row {height="50%"}
+
+```{r}
+create_data_table <- function(data) {
+  # Prepare table data with both nominal and adjusted values
+  table_data <- data %>%
+    select(
+      Title,
+      Released_year,
+      Genre,
+      Rated,
+      Director,
+      BoxOffice_num,
+      BoxOffice_adjusted,
+      Metascore,
+      imdbRating,
+      imdbVotes,
+      Runtime_num
+    ) %>%
+    mutate(
+      # Format nominal box office
+      BoxOffice_Nominal = case_when(
+        is.na(BoxOffice_num) ~ "N/A",
+        BoxOffice_num == 0 ~ "N/A",
+        BoxOffice_num < 1000000 ~ paste0(
+          "$",
+          format(round(BoxOffice_num / 1000), big.mark = ","),
+          "K"
+        ),
+        BoxOffice_num < 1000000000 ~ paste0(
+          "$",
+          format(round(BoxOffice_num / 1000000, 1), big.mark = ","),
+          "M"
+        ),
+        TRUE ~ paste0(
+          "$",
+          format(round(BoxOffice_num / 1000000000, 2), big.mark = ","),
+          "B"
+        )
+      ),
+      # Format adjusted box office
+      BoxOffice_Adj = case_when(
+        is.na(BoxOffice_adjusted) ~ "N/A",
+        BoxOffice_adjusted == 0 ~ "N/A",
+        BoxOffice_adjusted < 1000000 ~ paste0(
+          "$",
+          format(round(BoxOffice_adjusted / 1000), big.mark = ","),
+          "K"
+        ),
+        BoxOffice_adjusted < 1000000000 ~ paste0(
+          "$",
+          format(round(BoxOffice_adjusted / 1000000, 1), big.mark = ","),
+          "M"
+        ),
+        TRUE ~ paste0(
+          "$",
+          format(round(BoxOffice_adjusted / 1000000000, 2), big.mark = ","),
+          "B"
+        )
+      ),
+      # Format rating
+      IMDb_Rating = round(imdbRating, 1),
+      # Format other columns
+      Votes = format(imdbVotes, big.mark = ","),
+      Runtime = paste(Runtime_num, "min")
+    ) %>%
+    select(
+      Title,
+      Released_year,
+      Genre,
+      Rated,
+      Director,
+      BoxOffice_Nominal,
+      BoxOffice_Adj,
+      Metascore,
+      IMDb_Rating,
+      Votes,
+      Runtime
+    )
+
+  # Create data table
+  datatable(
+    table_data,
+    filter = 'top',
+    rownames = FALSE,
+    options = list(
+      pageLength = 25,
+      searchHighlight = TRUE,
+      paging = TRUE,
+      dom = 'Bfrtip',
+      buttons = c('copy', 'csv', 'excel'),
+      columnDefs = list(
+        list(className = 'dt-center', targets = c(1, 6, 7, 8, 9)),
+        list(className = 'dt-right', targets = c(4, 5))
+      )
+    ),
+    colnames = c(
+      'Title',
+      'Year',
+      'Genres',
+      'Rated',
+      'Director(s)',
+      'Box Office (Nominal)',
+      'Box Office (2024 adj.)',
+      'Metascore',
+      'IMDb Rating',
+      'Votes',
+      'Runtime'
+    )
+  )
+}
+```
+
+```{r}
+#| title: "Interactive Movie Explorer 2000-2025"
+movies_table <- create_data_table(movies_clean)
+movies_table
+```
+
+# Genre Analysis 
+
+## Row
+
+```{r}
+create_genre_combinations <- function(data) {
+  genre_combos <- data %>%
+    filter(str_detect(Genre, ", ")) %>%
+    mutate(
+      genre_count = str_count(Genre, ", ") + 1,
+      primary_genre = str_split(Genre, ", ", simplify = TRUE)[, 1],
+      secondary_genre = str_split(Genre, ", ", simplify = TRUE)[, 2]
+    ) %>%
+    filter(!is.na(secondary_genre), secondary_genre != "") %>%
+    group_by(primary_genre, secondary_genre) %>%
+    summarise(
+      count = n(),
+      avg_revenue = mean(BoxOffice_adjusted, na.rm = TRUE), # Using adjusted
+      avg_rating = mean(imdbRating, na.rm = TRUE),
+      .groups = "drop"
+    ) %>%
+    filter(count >= 5)
+
+  heatmap <- ggplot(genre_combos, aes(x = primary_genre, y = secondary_genre)) +
+    geom_tile(aes(fill = avg_revenue / 1e6)) +
+    geom_text(aes(label = round(avg_rating, 1)), size = 3) +
+    scale_fill_viridis(name = "Avg Revenue\n(2024 Million $)") +
+    labs(
+      subtitle = "Color = Average Revenue (2024 dollars) | Numbers = Average Rating",
+      x = "Primary Genre",
+      y = "Secondary Genre"
+    ) +
+    theme_minimal() +
+    theme(
+      axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
+      axis.title.x = element_text(size = 10, face = "bold"),
+      axis.title.y = element_text(size = 10, face = "bold"),
+      plot.title = element_text(size = 12, face = "bold"),
+      plot.title.position = "plot",
+      plot.subtitle = element_text(size = 12),
+      legend.title = element_text(face = "bold", size = 9),
+      legend.key.size = unit(0.4, "lines"),
+      plot.caption.position = "panel",
+      legend.spacing.y = unit(0.2, "lines"),
+      legend.text = element_text(size = 8)
+    )
+
+  return(heatmap)
+}
+```
+
+```{r}
+create_seasonal_analysis <- function(data) {
+  seasonal_data <- data %>%
+    filter(!is.na(Released)) %>%
+    mutate(
+      month = month(Released, label = TRUE),
+      week = week(Released),
+      quarter = quarter(Released)
+    ) %>%
+    group_by(month) %>%
+    summarise(
+      avg_revenue = mean(BoxOffice_adjusted, na.rm = TRUE) / 1e6, # Using adjusted
+      movie_count = n(),
+      avg_rating = mean(imdbRating, na.rm = TRUE),
+      blockbuster_pct = sum(BoxOffice_adjusted > 500000000, na.rm = TRUE) /
+        n() *
+        100, # Adjusted threshold
+      .groups = "drop"
+    )
+
+  polar_plot <- seasonal_data %>%
+    ggplot(aes(x = month)) +
+    geom_col(aes(y = avg_revenue, fill = avg_rating), width = 0.9) +
+    geom_text(aes(y = avg_revenue + 5, label = movie_count), size = 3) +
+    coord_polar() +
+    scale_fill_viridis(name = "Avg Rating") +
+    labs(
+      subtitle = "Bar height = Average Revenue (2024 dollars) | Numbers = Movie Count",
+      x = "",
+      y = "Average Revenue (Million USD)"
+    ) +
+    theme_minimal() +
+    theme(axis.text.y = element_blank())
+
+  return(polar_plot)
+}
+```
+
+```{r}
+#| title: "Genre Combination Success Matrix"
+#| fill: true
+#| fig-width: 12
+#| fig-height: 10
+genre_heatmap <- create_genre_combinations(movies_clean)
+genre_heatmap
+```
+
+```{r}
+#| title: "Seasonal Movie Release Analysis"
+movies_season <- create_seasonal_analysis(movies_clean)
+movies_season
+```
+
+## Row {height="50%"}
+
+```{r}
+# 4. BOX OFFICE DISTRIBUTION - Show both nominal and adjusted
+create_box_office_distribution <- function(data) {
+  # Adjusted distribution
+  p1 <- data %>%
+    filter(BoxOffice_adjusted > 0) %>%
+    ggplot(aes(x = BoxOffice_adjusted / 1e6)) +
+    geom_histogram(bins = 50, fill = "steelblue", alpha = 0.8) +
+    scale_x_log10(
+      breaks = c(0.1, 1, 10, 100, 1000, 10000),
+      labels = c("0.1", "1", "10", "100", "1K", "10K")
+    ) +
+    labs(
+      title = "Box Office Distribution - Inflation Adjusted (2024 dollars)",
+      x = "Box Office (Million USD)",
+      y = "Number of Movies"
+    ) +
+    theme_minimal()
+  return(p1)
+}
+
+```
+
+```{r}
+log_dist <- create_box_office_distribution(movies_clean)
+log_dist
+```
 
