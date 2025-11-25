@@ -425,3 +425,257 @@ log_dist <- create_box_office_distribution(movies_clean)
 log_dist
 ```
 
+# Top performance
+## Row {height="50%"}
+
+```{r}
+
+create_top_performers <- function(data) {
+
+  # ensure Released_year is numeric and filter
+  data <- data %>%
+    mutate(Year_num = as.numeric(Released_year)) %>%
+    filter(!is.na(Year_num),
+           Year_num >= 2000,
+           Year_num <= 2025)
+
+  # Revenue – lollipop with dropdown by Year
+
+  top_revenue_by_year <- data %>%
+    group_by(Year = Year_num) %>%
+    arrange(desc(BoxOffice_adjusted), .by_group = TRUE) %>%
+    slice_head(n = 20) %>%
+    ungroup() %>%
+    mutate(BoxOffice_m = BoxOffice_adjusted / 1e6)
+
+  years_rev <- sort(unique(top_revenue_by_year$Year))
+  n_rev_years <- length(years_rev)
+
+  revenue_dropdown <- plot_ly()
+  buttons_rev <- list()
+
+  for (i in seq_along(years_rev)) {
+    yr <- years_rev[i]
+
+    df <- top_revenue_by_year %>%
+      filter(Year == yr) %>%
+      arrange(BoxOffice_m, Title) %>%
+      distinct(Title, .keep_all = TRUE)
+
+    df$Title <- factor(df$Title, levels = df$Title)
+
+    revenue_dropdown <- revenue_dropdown %>%
+      add_segments(
+        data = df,
+        x = 0, xend = ~BoxOffice_m,
+        y = ~Title, yend = ~Title,
+        showlegend = FALSE,
+        line = list(color = "gray70", width = 1),
+        visible = if (i == 1) TRUE else FALSE
+      ) %>%
+      add_markers(
+        data = df,
+        x = ~BoxOffice_m,
+        y = ~Title,
+        showlegend = FALSE,
+        marker = list(
+          size = 8,
+          color = ~imdbRating,
+          colorscale = "Viridis",
+          showscale = (i == 1),
+          colorbar = list(
+            title = "IMDb Rating",
+            x = 1.10,          ## <<< push colorbar to the far right
+            y = 0.5
+          ),
+          line = list(color = "white", width = 0.5)
+        ),
+        name = yr,
+        visible = if (i == 1) TRUE else FALSE,
+        hovertemplate = paste(
+          "<b>%{y}</b><br>",
+          "Box Office: %{x:.1f} M<br>",
+          "IMDb: %{marker.color}<extra></extra>"
+        )
+      )
+
+    vis_vec <- rep(FALSE, 2 * n_rev_years)
+    vis_vec[(2 * i - 1):(2 * i)] <- TRUE
+
+    buttons_rev[[i]] <- list(
+      method = "update",
+      args = list(
+        list(visible = vis_vec),
+        list(
+          title = paste0(
+            "Top 20 Movies by Box Office Revenue (Inflation-Adjusted) – ",
+            yr,
+            "<br><sup>All values in 2024 dollars</sup>"
+          )
+        )
+      ),
+      label = as.character(yr)
+    )
+  }
+
+  revenue_dropdown <- revenue_dropdown %>%
+    layout(
+      title = list(
+        text = "Top 20 Movies by Box Office Revenue (Inflation-Adjusted)<br><sup>All values in 2024 dollars</sup>",
+        x = 0.5,
+        xanchor = "center"
+      ),
+      xaxis = list(
+        title = "Box Office (Million USD)",
+        zeroline = FALSE
+      ),
+      yaxis = list(
+        title = "",
+        showgrid = FALSE
+      ),
+      margin = list(l = 140, r = 80, t = 80, b = 60),  ## <<< a bit more right margin
+      paper_bgcolor = "rgba(0,0,0,0)",
+      plot_bgcolor  = "rgba(0,0,0,0)",
+      updatemenus = list(
+        list(
+          type = "dropdown",
+          x = 0.02, y = 1.15,          ## <<< keep dropdown in top-left
+          xanchor = "left",
+          yanchor = "top",
+          buttons = buttons_rev,
+          direction = "down",
+          showactive = TRUE
+        )
+      )
+    )
+
+  # Rating – horizontal bar chart with dropdown by Year
+
+  top_rated_by_year <- data %>%
+    filter(imdbVotes > 50000) %>%
+    group_by(Year = Year_num) %>%
+    arrange(desc(imdbRating), desc(imdbVotes), .by_group = TRUE) %>%
+    slice_head(n = 20) %>%
+    ungroup()
+
+  years_rat <- sort(unique(top_rated_by_year$Year))
+  n_rat_years <- length(years_rat)
+
+  rating_dropdown <- plot_ly()
+  buttons_rat <- list()
+
+  for (i in seq_along(years_rat)) {
+    yr <- years_rat[i]
+
+    df <- top_rated_by_year %>%
+      filter(Year == yr) %>%
+      arrange(imdbRating, Title) %>%
+      distinct(Title, .keep_all = TRUE)
+
+    df$Title <- factor(df$Title, levels = df$Title)
+
+    rating_dropdown <- rating_dropdown %>%
+      add_trace(
+        data = df,
+        type = "bar",
+        orientation = "h",
+        x = ~imdbRating,
+        y = ~Title,
+        text = ~paste0("Votes: ", comma(imdbVotes)),
+        textposition = "outside",
+        marker = list(
+          color = ~log10(imdbVotes),
+          colorscale = "Viridis",
+          showscale = (i == 1),
+          colorbar = list(
+            title = "Votes (log10)",
+            x = 1.10,      ## <<< move this colorbar right too
+            y = 0.5
+          )
+        ),
+        name = yr,
+        visible = if (i == 1) TRUE else FALSE,
+        hovertemplate = paste(
+          "<b>%{y}</b><br>",
+          "IMDb: %{x}<br>",
+          "%{text}<extra></extra>"
+        )
+      )
+
+    vis_vec <- rep(FALSE, n_rat_years)
+    vis_vec[i] <- TRUE
+
+    buttons_rat[[i]] <- list(
+      method = "update",
+      args = list(
+        list(visible = vis_vec),
+        list(
+          title = paste0("Top 20 Highest Rated Movies – ", yr)
+        )
+      ),
+      label = as.character(yr)
+    )
+  }
+
+  rating_dropdown <- rating_dropdown %>%
+    layout(
+      title = list(
+        text = "Top 20 Highest Rated Movies",
+        x = 0.5,
+        xanchor = "center"
+      ),
+      xaxis = list(
+        title = "IMDb Rating",
+        zeroline = FALSE
+      ),
+      yaxis = list(
+        title = "",
+        showgrid = FALSE
+      ),
+      showlegend = FALSE,
+      margin = list(l = 180, r = 80, t = 80, b = 60),  ## <<< more right margin
+      paper_bgcolor = "rgba(0,0,0,0)",
+      plot_bgcolor  = "rgba(0,0,0,0)",
+      updatemenus = list(
+        list(
+          type = "dropdown",
+          x = 0.02, y = 1.15,          ## <<< same top-left position
+          xanchor = "left",
+          yanchor = "top",
+          buttons = buttons_rat,
+          direction = "down",
+          showactive = TRUE
+        )
+      )
+    )
+
+  list(
+    revenue = revenue_dropdown,
+    rating  = rating_dropdown
+  )
+}
+
+```
+
+```{r}
+#| title: "Top 20 Movies by Box Office Revenue(Inflation-Adjusted)"
+#| fill: true
+#| fig-width: 12
+#| fig-height: 10
+
+top_plots <- create_top_performers(movies_clean)
+top_plots$revenue
+
+
+```
+
+```{r}
+#| title: "Top 20 Highest Rated Movies"
+#| fill: true
+#| fig-width: 12
+#| fig-height: 10
+
+top_plots <- create_top_performers(movies_clean)
+top_plots$rating
+```
+
