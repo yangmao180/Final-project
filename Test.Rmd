@@ -33,6 +33,8 @@ movies_clean <- read_rds("data/movies_clean.rds")
 
 # Home 
 
+**Welcome to Movie Prophet!**
+
 
 
 
@@ -103,7 +105,8 @@ renderValueBox({
   valueBox( icon = "star", color = "#b73779",value = cards$date_range)})
 ```
 
-Column {.tabset data-width=350}
+
+Column {.tabset data-width=200}
 -----------------------------------------------------------------------
 ### Primary Genre Heatmap 
 
@@ -568,4 +571,23 @@ output$polar_season <- renderPlotly({
 plotlyOutput("polar_season")
 ```
 
-# Test
+# Top Performers
+
+```{r}
+
+
+```
+
+### Top 20 Movies by Box Office Revenue
+```{r}
+top_plots <- create_top_performers(movies_clean)
+top_plots$revenue
+```
+
+### Top 20 Performers by Genre
+
+```{r}
+top_plots <- create_top_performers(movies_clean)
+top_plots$rating
+```
+

@@ -1,16 +1,14 @@
 ---
 title: "Movie Data Dashboard"
-format: 
-  dashboard
-theme: [default, theme/styles.scss]
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: rows
+    vertical_layout: fill
+runtime: shiny
 ---
 
-```{r}
-#| label: load-packages
-#| message: false
-#| echo: false
-
-#Load required packages
+```{r setup, include=FALSE}
+library(flexdashboard)
 library(tidyverse)
 library(plotly)
 library(DT)
@@ -21,18 +19,24 @@ library(networkD3)
 library(scales)
 library(lubridate)
 library(ggridges)
-library(stringr)
 library(flexdashboard)
 ```
 
-```{r}
-#| label: load-data
-#| message: false
+
+```{r load data, include = FALSE}
 # Read in data
 movies_clean <- read_rds("data/movies_clean.rds")
 ```
 
-```{r}
+# About
+
+# Overview 
+
+
+Row {data-height=100}
+-----------------------------------------------------------------------
+
+```{r include= FALSE}
 #| warning: false
 create_overview_cards <- function(data) {
   # Calculate key statistics using adjusted values
@@ -66,171 +70,94 @@ create_overview_cards <- function(data) {
 cards <- create_overview_cards(movies_clean)
 ```
 
-
-# Home
-
-::: {.callout-note}
-## Tip with Title
-
-This is an example of a callout with a title.
-:::
-
-
-# Overview
-
-## Row {height="10%"}
+### Total Number of Movies {.value-box}
 
 ```{r}
-#| component: valuebox
-#| title: "Total Movies"
-list(
-  icon = "film",
-  color = "#b73779",
-  value = cards$total_movies
-)
+renderValueBox({
+  valueBox( icon = "film", color = "#b73779",value = cards$total_movies)})
 ```
 
+
+### Total Revenue in 2025 Dollars {.value-box}
 ```{r}
-#| component: valuebox
-#| title: "Total Revenue in 2025 Adjusted Dollars"
-list(
-  icon = "piggy-bank",
-  color = "#b73779",
-  value = cards$total_revenue
-)
+renderValueBox({
+  valueBox( icon = "film", color = "#b73779",value = cards$total_revenue)})
 ```
 
+
+### Average Rating {.value-box}
 ```{r}
-#| component: valuebox
-#| title: "Average IMDB Rating"
-list(
-  icon = "star",
-  color = "#b73779",
-  value = cards$avg_rating
-)
+renderValueBox({
+  valueBox( icon = "star", color = "#b73779",value = cards$avg_rating)})
 ```
 
+
+### Date Range of Released Movies {.value-box}
 ```{r}
-#| component: valuebox
-#| title: "Date Range of Released Movies"
-list(
-  icon = "calendar4-week",
-  color = "#b73779",
-  value = cards$date_range
-)
+renderValueBox({
+  valueBox( icon = "star", color = "#b73779",value = cards$date_range)})
 ```
 
-## Row {height="30%"}
+Row {data-height=500}
+-----------------------------------------------------------------------
 
-```{r}
-# | title: "Genre Universe: Box Office Dominance (Inflation-Adjusted)"
-create_genre_treemap <- function(data) {
-  genre_stats <- data %>%
-    separate_rows(Genre, sep = ", ") %>%
-    group_by(Genre) %>%
-    summarise(
-      total_revenue = sum(BoxOffice_adjusted, na.rm = TRUE), # Using adjusted
-      movie_count = n(),
-      avg_rating = mean(imdbRating, na.rm = TRUE),
-      .groups = "drop"
-    ) %>%
-    filter(movie_count >= 10) %>%
-    mutate(
-      label = paste(
-        Genre,
-        "\n",
-        "$",
-        round(total_revenue / 1e9, 1),
-        "B\n",
-        movie_count,
-        "movies\n",
-        "★",
-        round(avg_rating, 1)
-      )
-    )
-
-  ggplot(
-    genre_stats,
-    aes(area = total_revenue, fill = avg_rating, label = label)
-  ) +
-    geom_treemap() +
-    geom_treemap_text(
-      colour = "white",
-      place = "centre",
-      size = 12
-    ) +
-    scale_fill_viridis(name = "Avg Rating", option = "magma") +
-    theme_minimal()
-}
-```
-
+## Genre Heatmap
 ```{r}
 create_genre_treemap <- function(data) {
   genre_stats <- data %>%
     separate_rows(Genre, sep = ", ") %>%
     group_by(Genre) %>%
     summarise(
-      total_revenue = sum(BoxOffice_adjusted, na.rm = TRUE), # Using adjusted
+      total_revenue = sum(BoxOffice_adjusted, na.rm = TRUE),
       movie_count = n(),
       avg_rating = mean(imdbRating, na.rm = TRUE),
       .groups = "drop"
     ) %>%
     filter(movie_count >= 10) %>%
     mutate(
-      label = paste(
-        Genre,
-        "\n",
-        "$",
-        round(total_revenue / 1e9, 1),
-        "B\n",
-        movie_count,
-        "movies\n",
-        "★",
-        round(avg_rating, 1)
-      ),
-      # Create text color based on rating value
-      text_color = ifelse(
-        avg_rating < mean(avg_rating, na.rm = TRUE),
-        "white",
-        "black"
+      label = paste0(
+        "Genre: ", Genre,
+        "<br>Revenue: $", round(total_revenue / 1e9, 1), "B",
+        "<br>Movies: ", movie_count,
+        "<br>Rating: ", round(avg_rating, 1)
       )
     )
 
-  ggplot(
-    genre_stats,
-    aes(area = total_revenue, fill = avg_rating, label = label)
-  ) +
-    geom_treemap() +
-    geom_treemap_text(
-      aes(colour = text_color),
-      place = "centre",
-      size = 12
-    ) +
-    scale_fill_viridis(name = "Average Rating", option = "magma") +
-    scale_colour_identity() + # Use the actual color values
-    theme_minimal()
+  plot_ly(
+    data = genre_stats,
+    type = "treemap",
+    labels = ~Genre,
+    parents = NA,
+    values = ~total_revenue,
+    customdata = ~label,
+    hovertemplate = "%{customdata}<extra></extra>",
+    marker = list(
+      colors = ~avg_rating,
+      colorscale = "Inferno",
+      showscale = TRUE
+    )
+  )
 }
+
 ```
 
 ```{r}
-#| title: "Genre Universe: Box Office Dominance (Inflation-Adjusted)"
-#| warning: false
-#| message: false
-
-genre_treemap <- create_genre_treemap(movies_clean)
-genre_treemap
+plotlyOutput("treemap")
 ```
 
+```{r}
+output$treemap <- renderPlotly({
+  create_genre_treemap(movies_clean)
+})
+```
 
 ```{r}
-#| title: "Box Office Distribution (Log Scale)"
-# 4. BOX OFFICE DISTRIBUTION - Show both nominal and adjusted
+#BOX OFFICE DISTRIBUTION - Show both nominal and adjusted
 create_box_office_distribution <- function(data) {
-  # Adjusted distribution
   p1 <- data %>%
     filter(BoxOffice_adjusted > 0) %>%
     ggplot(aes(x = BoxOffice_adjusted / 1e6)) +
-    geom_histogram(bins = 50, fill = "steelblue", alpha = 0.8) +
+    geom_histogram(bins = 50, fill = "#de4968", alpha = 0.8) +
     scale_x_log10(
       breaks = c(0.1, 1, 10, 100, 1000, 10000),
       labels = c("0.1", "1", "10", "100", "1K", "10K")
@@ -241,21 +168,19 @@ create_box_office_distribution <- function(data) {
       y = "Number of Movies"
     ) +
     theme_minimal()
-  return(p1)
+
+  plotly::ggplotly(p1)
 }
 
 ```
 
 ```{r}
-#| title: "Distribution of Box Office Revenue (Log Scale)"
 log_dist <- create_box_office_distribution(movies_clean)
 log_dist
 ```
 
 
-
-# Movie Explorer 
-## Row {height="50%"}
+# Movie Explorer
 
 ```{r}
 create_data_table <- function(data) {
@@ -369,87 +294,78 @@ create_data_table <- function(data) {
 ```
 
 ```{r}
-#| title: "Interactive Movie Explorer 2000-2025"
 movies_table <- create_data_table(movies_clean)
 movies_table
 ```
 
-# Genre Analysis 
+# Genre Analysis
 
-## Row
+Row 1
+--------------------------------------------------------
 
 ```{r}
-create_genre_combinations <- function(data) {
-  genre_combos <- data %>%
-    filter(str_detect(Genre, ", ")) %>%
-    mutate(
-      genre_count = str_count(Genre, ", ") + 1,
-      primary_genre = str_split(Genre, ", ", simplify = TRUE)[, 1],
-      secondary_genre = str_split(Genre, ", ", simplify = TRUE)[, 2]
-    ) %>%
-    filter(!is.na(secondary_genre), secondary_genre != "") %>%
-    group_by(primary_genre, secondary_genre) %>%
+make_colorscale <- function(option = "magma", n = 256) {
+  cols <- viridisLite::viridis(n, option = option)
+  list(
+    seq(0, 1, length.out = n),
+    cols
+  )
+}
+
+create_genre_treemap <- function(data) {
+
+  genre_stats <- data %>%
+    separate_rows(Genre, sep = ", ") %>%
+    group_by(Genre) %>%
     summarise(
-      count = n(),
-      avg_revenue = mean(BoxOffice_adjusted, na.rm = TRUE), # Using adjusted
+      total_revenue = sum(BoxOffice_adjusted, na.rm = TRUE),
+      movie_count = n(),
       avg_rating = mean(imdbRating, na.rm = TRUE),
       .groups = "drop"
     ) %>%
-    filter(count >= 5) %>%
-    # ADD THIS: Calculate text color based on revenue value
+    filter(movie_count >= 10) %>%
     mutate(
-      revenue_norm = (avg_revenue - min(avg_revenue)) /
-        (max(avg_revenue) - min(avg_revenue)),
-      text_color = ifelse(revenue_norm < 0.8, "white", "black") # Adjust threshold as needed
-    )
-
-  heatmap <- ggplot(genre_combos, aes(x = primary_genre, y = secondary_genre)) +
-    geom_tile(aes(
-      fill = avg_revenue / 1e6,
-      text = paste(
-        "Primary:",
-        primary_genre,
-        "\nSecondary:",
-        secondary_genre,
-        "\nMovies:",
-        count,
-        "\nRevenue: $",
-        round(avg_revenue / 1e6, 1),
-        "M",
-        "\nRating:",
-        round(avg_rating, 1)
+      label = paste0(
+        "<b>", Genre, "</b>",
+        "<br>$", round(total_revenue / 1e9, 1), "B",
+        "<br>", movie_count, " movies",
+        "<br>★ ", round(avg_rating, 1)
       )
-    )) +
-    # CHANGE THIS: Use adaptive text color instead of fixed "white"
-    geom_text(aes(label = round(avg_rating, 1), color = text_color), size = 3) +
-    scale_fill_viridis(
-      name = "Average Revenue\n(2024 Million $)",
-      option = "B" # Fixed the option (was "Bf")
-    ) +
-    # ADD THIS: Use actual color values
-    scale_color_identity() +
-    labs(
-      x = "Primary Genre",
-      y = "Secondary Genre"
-    ) +
-    theme_minimal() +
-    theme(
-      axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
-      axis.title.x = element_text(size = 10, face = "bold"),
-      axis.title.y = element_text(size = 10, face = "bold"),
-      plot.title = element_text(size = 12, face = "bold"),
-      plot.title.position = "plot",
-      plot.subtitle = element_text(size = 12),
-      legend.title = element_text(face = "bold", size = 9),
-      legend.key.size = unit(0.4, "lines"),
-      plot.caption.position = "panel",
-      legend.text = element_text(size = 10),
-      legend.key.height = unit(0.8, "cm")
     )
 
-  return(heatmap)
+  # convert viridis to valid plotly format
+  viridis_scale <- make_colorscale("magma", n = 256)
+
+  plot_ly(
+    data = genre_stats,
+    type = "treemap",
+    labels = ~Genre,
+    parents = NA,
+    values = ~total_revenue,
+    customdata = ~label,
+    hovertemplate = "%{customdata}<extra></extra>",
+    marker = list(
+      colors = ~avg_rating,
+      colorscale = viridis_scale,   # <-- this now works!
+      reversescale = FALSE,
+      showscale = TRUE,
+      colorbar = list(title = "Avg Rating")
+    ),
+    textinfo = "label"
+  )
 }
+
 ```
+
+```{r}
+output$heatmap <- renderPlotly({
+  create_genre_combinations(movie_data)
+})
+```
+
+
+Column {width = }
+--------------------------------------------------------
 
 
 ```{r}
@@ -496,12 +412,7 @@ create_seasonal_analysis <- function(data) {
 ```
 
 ```{r}
-genre_heatmap <- create_genre_combinations(movies_clean)
-genre_heatmap
-```
-
-```{r}
-
+#| title: "Seasonal Movie Release Analysis"
 movies_season <- create_seasonal_analysis(movies_clean)
 movies_season
 ```
