@@ -1,0 +1,112 @@
+---
+title: "Movie Data Dashboard"
+output: 
+    flexdashboard::flex_dashboard:
+        orientation: columns
+        vertical_layout: scroll
+runtime: shiny
+---
+
+```{r load prackages, include = FALSE}
+library(tidyverse)
+library(plotly)
+library(DT)
+library(viridis)
+library(treemapify)
+library(ggwordcloud)
+library(networkD3)
+library(scales)
+library(lubridate)
+library(ggridges)
+library(flexdashboard)
+```
+
+```{r load data, include = FALSE}
+# Read in data
+movies_clean <- read_rds("data/movies_clean.rds")
+```
+
+# About
+
+# Overview 
+
+
+```{r include= FALSE}
+#| warning: false
+create_overview_cards <- function(data) {
+  # Calculate key statistics using adjusted values
+  total_movies <- nrow(data)
+  total_revenue <- sum(data$BoxOffice_adjusted, na.rm = TRUE) # Using adjusted
+  avg_rating <- mean(data$imdbRating, na.rm = TRUE)
+  date_range <- paste(
+    min(data$Released_year, na.rm = TRUE),
+    "-",
+    max(data$Released_year, na.rm = TRUE)
+  )
+
+  # Extract unique counts
+  all_directors <- unlist(str_split(data$Director, ", "))
+  unique_directors <- n_distinct(all_directors[!is.na(all_directors)])
+
+  all_genres <- unlist(str_split(data$Genre, ", "))
+  unique_genres <- n_distinct(all_genres[!is.na(all_genres)])
+
+  # Return as list for display
+  list(
+    total_movies = total_movies,
+    total_revenue = dollar(total_revenue),
+    avg_rating = round(avg_rating, 2),
+    date_range = date_range,
+    unique_directors = (unique_directors),
+    unique_genres = unique_genres
+  )
+}
+
+cards <- create_overview_cards(movies_clean)
+```
+
+
+```{r}
+#| component: valuebox
+#| title: "Total Movies"
+list(
+  icon = "film",
+  color = "#b73779",
+  value = cards$total_movies
+)
+```
+
+```{r}
+#| component: valuebox
+#| title: "Total Revenue in 2025 Adjusted Dollars"
+list(
+  icon = "piggy-bank",
+  color = "#b73779",
+  value = cards$total_revenue
+)
+```
+
+```{r}
+#| component: valuebox
+#| title: "Average IMDB Rating"
+list(
+  icon = "star",
+  color = "#b73779",
+  value = cards$avg_rating
+)
+```
+
+```{r}
+#| component: valuebox
+#| title: "Date Range of Released Movies"
+list(
+  icon = "calendar4-week",
+  color = "#b73779",
+  value = cards$date_range
+)
+```
+
+# Movie Explorer
+
+# Genre Analysis 
+
