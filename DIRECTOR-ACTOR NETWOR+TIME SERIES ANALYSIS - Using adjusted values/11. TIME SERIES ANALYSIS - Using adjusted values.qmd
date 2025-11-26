@@ -1,0 +1,163 @@
+# 11. TIME SERIES ANALYSIS - Using adjusted values
+
+```{r}
+
+library(tidyverse)
+library(networkD3)
+library(plotly)
+library(scales)
+
+```
+
+```{r}
+setwd("D:/work/JHU/Final-project")
+movies <- readRDS("data/movies_clean.rds")
+
+movies <- readRDS("data/movies_clean.rds")
+
+create_time_series_analysis <- function(data) {
+  if (!"Year" %in% colnames(data)) {
+    if ("Released_year" %in% colnames(data)) {
+      data <- data %>% dplyr::mutate(Year = Released_year)
+    } else if ("Released" %in% colnames(data)) {
+      data <- data %>% dplyr::mutate(Year = lubridate::year(Released))
+    } else {
+      stop("No Year or Released_year column found in dataset.")
+    }
+  }
+
+  yearly_stats <- data %>%
+    dplyr::group_by(Year) %>%
+    dplyr::summarise(
+      total_revenue = sum(BoxOffice_adjusted, na.rm = TRUE) / 1e9,
+      movie_count   = dplyr::n(),
+      avg_rating    = mean(imdbRating, na.rm = TRUE),
+      avg_runtime   = mean(Runtime_num, na.rm = TRUE),
+      .groups       = "drop"
+    ) %>%
+    dplyr::filter(Year >= 2000)
+
+  ts_plot <- plotly::plot_ly(yearly_stats) %>%
+
+    plotly::add_trace(
+      x = ~Year,
+      y = ~total_revenue,
+      type = "scatter",
+      mode = "lines+markers",
+      name = "Total Revenue (2024 adj.)",
+      line   = list(color = "darkblue", width = 3),
+      marker = list(size = 7),
+      text = ~paste0(
+        "Year: ", Year,
+        "<br>Total Revenue: ", round(total_revenue, 2), " B$",
+        "<br>Movie Count: ", movie_count,
+        "<br>Avg Rating: ", round(avg_rating, 2),
+        "<br>Avg Runtime: ", round(avg_runtime, 1), " min"
+      ),
+      hovertemplate = "%{text}<extra></extra>"
+    ) %>%
+
+    plotly::add_trace(
+      x = ~Year,
+      y = ~movie_count / 100,
+      type = "scatter",
+      mode = "lines+markers",
+      name = "Movie Count (÷100)",
+      yaxis = "y2",
+      line   = list(color = "darkgreen", width = 2),
+      marker = list(size = 6)
+    ) %>%
+
+    plotly::add_trace(
+      x = ~Year,
+      y = ~avg_rating,
+      type = "scatter",
+      mode = "lines+markers",
+      name = "Avg Rating",
+      yaxis = "y3",
+      line   = list(color = "firebrick", width = 2),
+      marker = list(size = 6)
+    ) %>%
+
+    plotly::add_trace(
+      x = ~Year,
+      y = ~avg_runtime,
+      type = "scatter",
+      mode = "lines+markers",
+      name = "Avg Runtime (min)",
+      yaxis = "y4",
+      line   = list(color = "orange", width = 2),
+      marker = list(size = 6)
+    ) %>%
+
+    plotly::layout(
+      title = "Movie Industry Trends Over Time (Inflation-Adjusted)",
+      xaxis = list(title = "Year"),
+
+      yaxis = list(
+        title = "Total Revenue (Billion USD, 2024 adj.)",
+        side  = "left",
+        titlefont = list(color = "darkblue"),
+        tickfont  = list(color = "darkblue"),
+        linecolor = "darkblue",
+        tickcolor = "darkblue"
+      ),
+
+      yaxis2 = list(
+        title     = "Movie Count (÷100)",
+        overlaying = "y",
+        side       = "right",
+        showgrid   = FALSE,
+        titlefont = list(color = "darkgreen"),
+        tickfont  = list(color = "darkgreen"),
+        linecolor = "darkgreen",
+        tickcolor = "darkgreen"
+      ),
+
+      yaxis3 = list(
+        title      = "Average Rating",
+        overlaying = "y",
+        side       = "right",
+        position   = 0.95,
+        showgrid   = FALSE,
+        range      = c(5.5, 7.0),
+        titlefont = list(color = "firebrick"),
+        tickfont  = list(color = "firebrick"),
+        linecolor = "firebrick",
+        tickcolor = "firebrick"
+      ),
+
+      yaxis4 = list(
+        title      = "Average Runtime (minutes)",
+        overlaying = "y",
+        side       = "left",
+        position   = 0.05,
+        showgrid   = FALSE,
+        titlefont = list(color = "orange"),
+        tickfont  = list(color = "orange"),
+        linecolor = "orange",
+        tickcolor = "orange"
+      ),
+
+      hovermode = "x unified",
+      legend    = list(orientation = "h", x = 0.2, y = -0.1),
+      margin    = list(l = 80, r = 120, t = 60, b = 60)
+    )
+
+  return(ts_plot)
+}
+
+
+
+
+
+```
+
+```{r}
+ts_plot <- create_time_series_analysis(movies)
+ts_plot 
+```
+
+```{r} 
+htmlwidgets::saveWidget(ts_plot, "time_series_4metrics.html", selfcontained = TRUE)
+```

@@ -1,0 +1,171 @@
+# 7. DIRECTOR-ACTOR NETWORK
+
+```{r}
+
+#1.Load required packages
+library(tidyverse)
+library(igraph)
+library(visNetwork)
+library(scales)
+library(htmlwidgets)
+setwd("D:/work/JHU/Final-project")
+movies <- readRDS("data/movies_clean.rds")
+
+```
+
+```{r}
+#2.Construct the director–actor collaboration statistics.}
+collab_stats <- movies %>%
+  mutate(
+    primary_director = str_split(Director, ", ", simplify = TRUE)[, 1],
+    primary_actor    = str_split(Actors,   ", ", simplify = TRUE)[, 1]
+  ) %>%
+  filter(
+    !is.na(primary_director), primary_director != "",
+    !is.na(primary_actor),    primary_actor    != ""
+  ) %>%
+  group_by(primary_director, primary_actor) %>%
+  summarise(
+    collaborations = n(),
+    total_revenue  = sum(BoxOffice_adjusted, na.rm = TRUE),
+    avg_rating     = mean(imdbRating, na.rm = TRUE),
+    .groups        = "drop"
+  )
+
+```
+
+```{r}
+#3.Select important edges, build the igraph object, and detect communities.
+
+min_collab <- 2    
+n_edges    <- 120  
+
+edges_df <- collab_stats %>%
+  filter(collaborations >= min_collab) %>%
+  arrange(desc(total_revenue)) %>%
+  slice_head(n = n_edges) %>%
+  transmute(
+    from   = primary_director,
+    to     = primary_actor,
+    weight = total_revenue,
+    collab = collaborations
+  )
+
+
+g <- graph_from_data_frame(edges_df, directed = FALSE)
+
+
+cl <- cluster_louvain(g, weights = E(g)$weight)
+
+
+directors <- unique(edges_df$from)
+actors    <- unique(edges_df$to)
+
+nodes_df <- tibble(
+  id        = V(g)$name,
+  label     = V(g)$name,
+  role      = case_when(
+    id %in% directors ~ "Director",
+    id %in% actors    ~ "Actor",
+    TRUE              ~ "Other"
+  ),
+  community = factor(membership(cl)),
+  degree    = degree(g),
+  strength  = strength(g, weights = E(g)$weight)
+) %>%
+  mutate(
+    
+    group = paste0("Community ", community),
+    
+    value = rescale(strength, to = c(10, 40)),
+    
+    title = paste0(
+      "<b>", label, "</b><br>",
+      "Role: ", role, "<br>",
+      "Community: ", community, "<br>",
+      "Total revenue: ", dollar(strength), "<br>",
+      "Degree: ", degree
+    ),
+    
+    shape = ifelse(role == "Director", "dot", "triangle")
+  )
+
+```
+
+```{r}
+#4.Prepare edge data for use in visNetwork.
+edges_vis <- edges_df %>%
+  mutate(
+    width = rescale(log10(weight + 1), to = c(1, 8)),
+    title = paste0(
+      "<b>", from, " – ", to, "</b><br>",
+      "Collaborations: ", collab, "<br>",
+      "Total revenue: ", dollar(weight)
+    )
+  )
+
+```
+
+```{r}
+#5.Generate the interactive community visualization.
+vis_cluster <- visNetwork(nodes_df, edges_vis, main = list(
+  text  = "Director–Actor Collaboration Communities (Interactive)",
+  style = "font-size:26px; font-weight: bold; color: #222;"
+)) %>%
+  visOptions(
+    highlightNearest = list(enabled = TRUE, degree = 1, hover = TRUE),
+    nodesIdSelection = TRUE   
+  ) %>%
+  visLegend(
+    useGroups = TRUE,
+    position  = "right"
+  ) %>%
+  visEdges(
+    smooth = FALSE,
+    color  = list(color = "grey70", highlight = "orange")
+  ) %>%
+ visNodes(
+    borderWidth = 2,
+    color = list(
+      border = "#111"
+    ),
+    font = list(size = 20, color = "#000")
+  ) %>%
+   visLegend(
+    addNodes = list(
+      list(label = "Director", shape = "dot",      color = "grey"),
+      list(label = "Actor",    shape = "triangle", color = "grey")
+    ),
+    useGroups = FALSE,
+    position = "right"
+   )%>%
+  visInteraction(
+    dragNodes  = TRUE,
+    dragView   = TRUE,
+    zoomView   = TRUE
+  ) %>%
+  visPhysics(
+    solver = "barnesHut",
+    barnesHut = list(
+      gravitationalConstant = -2500,
+      springLength          = 180,
+      springConstant        = 0.02
+    ),
+    stabilization = TRUE
+ ) %>%
+  visLayout(randomSeed = 123) %>%        
+  visConfigure(enabled = FALSE)         
+
+vis_cluster
+
+```
+
+```{r}
+#6.Export the result as an HTML webpage.
+saveWidget(
+  vis_cluster,
+  "director_actor_communities_interactive.html",
+  selfcontained = TRUE
+)
+
+```
