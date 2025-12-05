@@ -1,0 +1,320 @@
+---
+title: "Sidebar"
+format: dashboard
+server: shiny
+---
+
+```{r}
+#| context: setup
+library(flexdashboard)
+library(tidyverse)
+library(plotly)
+library(DT)
+library(viridis)
+library(treemapify)
+library(ggwordcloud)
+library(networkD3)
+library(scales)
+library(lubridate)
+library(ggridges)
+library(flexdashboard)
+```
+
+```{r}
+#| context: data
+movies_clean <- read_rds("data/movies_clean.rds")
+time <- movies_clean %>%
+  group_by(Year) %>%
+  summarize(
+    count = n(),
+    IMDB = mean(imdbRating, na.rm = TRUE),
+    MetaCritic = mean(Metascore, na.rm = TRUE),
+    Runtime = mean(Runtime_num, na.rm = TRUE),
+    BoxOfficeRevenue = mean(BoxOffice_adjusted, na.rm = TRUE)
+  )
+group_vars <- c("Genre1", "Genre2", "Genre3", "Rated")
+```
+
+# Home 
+
+<span style="color: #246A73;font-size: 30px;">Welcome to Movie Prophet!</span>
+
+<span style="color: #246A73;">**About this dashboard**</span>
+
+This dashboard explores and analyzes factors that influence popularity of American movies released between 2000-2025. Factors such as genre, time of year of release, and director of the movie are included. The goal of the dashboard is to allow studios and investors to explore the trends in preferences of the audiences consuming American movies, and what factors to consider when making a new movie/investing in a new movie, for high box office sales. 
+
+The first sections of the dashboard include detailed visualizations showcasing the relationship between key factors and movie performance, measured by box office revenue. This includes interactive graphs showing how preferences for genres have changed over time, performance of movies by release time, and the most well-performing genres. 
+
+The second part of the dashboard includes machine learning models to determine if movie box office revenue can be predicted by the factors explored in the dashboard (e.g., genre, director, time of year of release). The performance of each of the models is featured, and the model that performs the best will be identified.
+
+![](movies.jpg.webp){width=80% style="border-radius:8px;"}
+
+<span style="color: #246A73;">**How to use this dashboard**</span>
+
+<span style = "color:#246A73;">Overview</span>
+
+This tab includes general information such as average rating across all movies, and total box office revenue from all movies included in the dashboard. Additionally, this tab features an interactive data table that allows the user to search by a variety of variables such as movie title, IMDB rating, or length of movie. 
+
+<span style = "color:#246A73;">Market Analysis</span>
+
+This tab features data visualizations on box office revenue by different variables such as month of movie release, distribution of box office revenues for American films from 2000-2025, and top movies by box office revenue. 
+
+<span style = "color:#246A73;">Genre Analysis</span>
+
+This tab features different analyses focusing on which genres tend to have higher box office revenues, and additionally, which combination of genres tend to have higher box office revenues. 
+
+<span style = "color:#246A73;">Time Trends</span>
+
+This tab features changes in various movie parameters over time. This includes average IMDB ratings, MPA film rating, and number of movies released each year.  
+
+<span style = "color:#246A73;">Movie Success Prediction</span>
+
+
+<span style="color: #246A73;">**Data Sources**</span>
+
+1. Wikipedia List of American Films released between 2000-2025 (up until November 16 2025)
+2. OMDB API for box office revenue, IMDB ratings, genre, director, and other variables.
+3. US Inflation Data from US Inflation Calculator website to adjust box office revenues for inflation.
+
+# Overview
+Row {data-height=100}
+-----------------------------------------------------------------------
+
+```{r include= FALSE}
+#| warning: false
+create_overview_cards <- function(data) {
+  total_movies <- nrow(data)
+  total_revenue <- sum(data$BoxOffice_adjusted, na.rm = TRUE)
+  avg_rating <- mean(data$imdbRating, na.rm = TRUE)
+  date_range <- paste(
+    min(data$Released_year, na.rm = TRUE),
+    "-",
+    max(data$Released_year, na.rm = TRUE)
+  )
+
+  # Return as list for display
+  list(
+    total_movies = total_movies,
+    total_revenue = dollar(total_revenue),
+    avg_rating = round(avg_rating, 2),
+    date_range = date_range
+  )
+}
+
+cards <- create_overview_cards(movies_clean)
+```
+
+### Total Number of Movies {.value-box}
+
+```{r}
+#| content: valuebox
+#| title: "Total Number of Movies"
+
+list(
+  color = "primary",
+  value = cards$total_movies
+)
+```
+
+
+### Total Revenue in 2025 Dollars {.value-box}
+```{r}
+renderValueBox({
+  valueBox(color = "#EDE6E3", value = cards$total_revenue)
+})
+```
+
+
+### Average Rating {.value-box}
+```{r}
+renderValueBox({
+  valueBox(color = "#EDE6E3", value = cards$avg_rating)
+})
+```
+
+
+### Date Range of Released Movies {.value-box}
+```{r}
+renderValueBox({
+  valueBox(color = "#EDE6E3", value = cards$date_range)
+})
+```
+
+Row {data-height=400}
+-----------------------------------------------------------------------
+
+### Movie Interactive Database (2000-2025)
+
+```{r}
+create_data_table <- function(data) {
+  # Prepare table data with both nominal and adjusted values
+  table_data <- data %>%
+    select(
+      Title,
+      Released_year,
+      Genre,
+      Rated,
+      Director,
+      BoxOffice_num,
+      BoxOffice_adjusted,
+      Metascore,
+      imdbRating,
+      imdbVotes,
+      Runtime_num
+    ) %>%
+    mutate(
+      # Format nominal box office
+      BoxOffice_Nominal = case_when(
+        is.na(BoxOffice_num) ~ "N/A",
+        BoxOffice_num == 0 ~ "N/A",
+        BoxOffice_num < 1000000 ~ paste0(
+          "$",
+          format(round(BoxOffice_num / 1000), big.mark = ","),
+          "K"
+        ),
+        BoxOffice_num < 1000000000 ~ paste0(
+          "$",
+          format(round(BoxOffice_num / 1000000, 1), big.mark = ","),
+          "M"
+        ),
+        TRUE ~ paste0(
+          "$",
+          format(round(BoxOffice_num / 1000000000, 2), big.mark = ","),
+          "B"
+        )
+      ),
+      # Format adjusted box office
+      BoxOffice_Adj = case_when(
+        is.na(BoxOffice_adjusted) ~ "N/A",
+        BoxOffice_adjusted == 0 ~ "N/A",
+        BoxOffice_adjusted < 1000000 ~ paste0(
+          "$",
+          format(round(BoxOffice_adjusted / 1000), big.mark = ","),
+          "K"
+        ),
+        BoxOffice_adjusted < 1000000000 ~ paste0(
+          "$",
+          format(round(BoxOffice_adjusted / 1000000, 1), big.mark = ","),
+          "M"
+        ),
+        TRUE ~ paste0(
+          "$",
+          format(round(BoxOffice_adjusted / 1000000000, 2), big.mark = ","),
+          "B"
+        )
+      ),
+      # Format rating
+      IMDb_Rating = round(imdbRating, 1),
+      # Format other columns
+      Votes = format(imdbVotes, big.mark = ","),
+      Runtime = paste(Runtime_num, "min")
+    ) %>%
+    select(
+      Title,
+      Released_year,
+      Genre,
+      Rated,
+      Director,
+      BoxOffice_Nominal,
+      BoxOffice_Adj,
+      Metascore,
+      IMDb_Rating,
+      Votes,
+      Runtime
+    )
+
+  # Create data table
+  datatable(
+    table_data,
+    filter = 'top',
+    rownames = FALSE,
+    options = list(
+      pageLength = 25,
+      searchHighlight = TRUE,
+      paging = TRUE,
+      dom = 'Brtip',
+      buttons = c('copy', 'csv', 'excel'),
+      columnDefs = list(
+        list(className = 'dt-center', targets = c(1, 6, 7, 8, 9)),
+        list(className = 'dt-right', targets = c(4, 5))
+      )
+    ),
+    colnames = c(
+      'Title',
+      'Year',
+      'Genres',
+      'Rated',
+      'Director(s)',
+      'Box Office (Nominal)',
+      'Box Office (2024 adj.)',
+      'Metascore',
+      'IMDb Rating',
+      'Votes',
+      'Runtime'
+    )
+  )
+}
+```
+
+```{r}
+movies_table <- create_data_table(movies_clean)
+movies_table
+```
+
+# Time Trends
+
+## Row
+
+```{r}
+#| content: card-toolbar
+selectInput('y', 'Y', names(time), names(time)[[2]])
+```
+
+```{r}
+#| context: server
+output$plot <- renderPlot({
+  p <- ggplot(
+    time,
+    aes(x = Year, y = .data[[input$y]])
+  ) +
+    geom_point() +
+    geom_line()
+  p
+})
+```
+
+```{r}
+plotOutput('plot')
+```
+
+### Column
+
+
+## Plot 2 
+
+```{r}
+#| content: card-toolbar
+selectInput('group', 'Group by', choices = group_vars, selected = "Genre1")
+```
+
+```{r}
+#| context: server
+output$options <- renderPlot({
+  categories <- movies_clean %>%
+    group_by(Year, .data[[input$group]]) %>%
+    summarize(count = n(), .groups = 'drop')
+
+  p <- ggplot(
+    categories,
+    aes(x = Year, y = count, color = .data[[input$group]])
+  ) +
+    geom_point() +
+    geom_line() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  p
+})
+```
+
+```{r}
+plotOutput('options')
+```

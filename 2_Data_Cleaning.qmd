@@ -1,0 +1,216 @@
+---
+title: "Data Cleaning"
+format: html
+---
+1. Load necessary libraries
+```{r}
+library(tidyverse)
+library(lubridate)
+library(scales)
+library(priceR)
+# Set options to avoid scientific notation
+options(scipen = 999)
+```
+
+2. Read in data
+```{r}
+full_data <- readRDS("data/full_data.rds")
+```
+
+3. Check for movies released before 2000 
+```{r}
+full_data %>%
+  filter(!is.na(Released)) %>%
+  filter(year(Released) < 2000)
+```
+
+4. Remove movies released before 2000 
+```{r}
+year_data <- full_data %>%
+  mutate(
+    Released_year = year(ymd(Released))
+  ) %>%
+  filter(Released_year >= 2000) %>%
+  select(-Year)
+```
+
+5. Inflation Adjustment Preparation
+```{r}
+# Get unique years from the data
+years_needed <- year_data %>%
+  mutate(Year = as.numeric(Released_year)) %>%
+  filter(!is.na(Year), Year >= 2000, Year <= 2024) %>%
+  pull(Year) %>%
+  unique() %>%
+  sort()
+
+# Get inflation factors for each year
+# Create inflation lookup table
+inflation_factors <- data.frame(
+  Year = years_needed,
+  Factor = map_dbl(years_needed, function(y) {
+    adjust_for_inflation(1, from_date = y, to_date = 2024, country = "US")
+  })
+)
+
+saveRDS(inflation_factors, "data/inflation_factors.RDS")
+```
+
+
+6. Data Cleaning with Inflation Adjustment
+```{r}
+# Data cleaning with pre-calculated inflation adjustment
+movies_clean <- year_data %>%
+  mutate(
+    # Clean box office data
+    BoxOffice_clean = str_remove_all(BoxOffice, "[\\$,]"),
+    BoxOffice_clean = str_trim(BoxOffice_clean),
+    BoxOffice_num = suppressWarnings(as.numeric(BoxOffice_clean)),
+
+    # Clean runtime
+    Runtime_num = as.numeric(str_extract(Runtime, "\\d+")),
+
+    # Clean Metascore
+    Metascore_num = as.numeric(Metascore),
+
+    # Add time features
+    decade = floor(Released_year / 10) * 10,
+    era = case_when(
+      Released_year < 2000 ~ "Blockbuster Era",
+      Released_year < 2010 ~ "Digital Era",
+      TRUE ~ "Streaming Era"
+    ),
+    Year = as.numeric(Released_year)
+  ) %>%
+
+  # Filter out movies with missing data
+  filter(
+    !is.na(BoxOffice_num),
+    BoxOffice_num > 0,
+    !is.na(imdbRating),
+    !is.na(Released_year)
+  ) %>%
+
+  # Join with pre-calculated inflation factors
+  left_join(inflation_factors, by = "Year") %>%
+
+  mutate(
+    # Calculate adjusted box office
+    BoxOffice_adjusted = round(BoxOffice_num * Factor),
+    inflation_multiplier = round(Factor, 2),
+
+    # Categorize adjusted box office
+    box_office_tier = case_when(
+      BoxOffice_adjusted < 1e6 ~ "< $1M",
+      BoxOffice_adjusted < 1e7 ~ "$1M - $10M",
+      BoxOffice_adjusted < 5e7 ~ "$10M - $50M",
+      BoxOffice_adjusted < 1e8 ~ "$50M - $100M",
+      BoxOffice_adjusted < 5e8 ~ "$100M - $500M",
+      BoxOffice_adjusted < 1e9 ~ "$500M - $1B",
+      TRUE ~ "> $1B"
+    ),
+
+    # Categorize nominal box office
+    box_office_tier_nominal = case_when(
+      BoxOffice_num < 1e6 ~ "< $1M",
+      BoxOffice_num < 1e7 ~ "$1M - $10M",
+      BoxOffice_num < 5e7 ~ "$10M - $50M",
+      BoxOffice_num < 1e8 ~ "$50M - $100M",
+      BoxOffice_num < 5e8 ~ "$100M - $500M",
+      BoxOffice_num < 1e9 ~ "$500M - $1B",
+      TRUE ~ "> $1B"
+    ),
+
+    # Rating tiers
+    rating_tier = case_when(
+      imdbRating < 5 ~ "Poor",
+      imdbRating < 6.5 ~ "Average",
+      imdbRating < 8 ~ "Good",
+      TRUE ~ "Excellent"
+    )
+  ) %>%
+  select(-Factor)
+```
+
+7. Final Formatting 
+```{r}
+movies_clean <- movies_clean %>%
+  mutate(
+    Metascore = as.numeric(Metascore),
+    rating_tier = factor(
+      rating_tier,
+      levels = c("Poor", "Average", "Good", "Excellent"),
+      ordered = TRUE
+    ),
+    box_office_tier_nominal = factor(
+      box_office_tier_nominal,
+      levels = c(
+        "< $1M",
+        "$1M - $10M",
+        "$10M - $50M",
+        "$50M - $100M",
+        "$100M - $500M",
+        "$500M - $1B",
+        "> $1B"
+      ),
+      ordered = TRUE
+    ),
+    Rated = factor(
+      Rated,
+      levels = c(
+        "G",
+        "PG",
+        "PG-13",
+        "R",
+        "NC-17",
+        "Not Rated",
+        "Unrated"
+      ),
+      ordered = TRUE
+    )
+  )
+
+#Split genre into separate columns
+movies_clean <- movies_clean %>%
+  separate(
+    Genre,
+    into = c("Genre1", "Genre2", "Genre3"),
+    sep = ", ",
+    fill = "right",
+    remove = FALSE
+  ) %>%
+  mutate(
+    Genre1 = as.factor(Genre1),
+    Genre2 = as.factor(Genre2),
+    Genre3 = as.factor(Genre3)
+  )
+
+#Remove unused columns
+movies_clean <- movies_clean %>%
+  select(
+    -Ratings,
+    -Runtime,
+    -Type,
+    -DVD,
+    -BoxOffice,
+    -Production,
+    -Website,
+    -Response,
+    -BoxOffice_clean,
+    -Metascore_num
+  )
+```
+
+Save the cleaned data 
+```{r}
+movies_clean <- movies_clean %>%
+  mutate(
+    BoxOffice_num = round(BoxOffice_num),
+    BoxOffice_adjusted = round(BoxOffice_adjusted)
+  )
+
+saveRDS(movies_clean, "data/movies_clean.RDS")
+```
+
+
+

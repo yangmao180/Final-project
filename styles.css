@@ -1,0 +1,111 @@
+/* ---------------------------------
+   GOOGLE FONT
+---------------------------------- */
+@import url('https://fonts.googleapis.com/css2?family=Cabin:wght@400;500;600;700&display=swap');
+
+/* Apply global font */
+body,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.navbar,
+.navbar-brand,
+.nav-link {
+    font-family: 'Cabin', sans-serif !important;
+}
+
+/* ---------------------------------
+   NAVBAR STYLING (Bootstrap 5)
+---------------------------------- */
+
+/* Navbar background */
+.navbar {
+    background-color: #133E43 !important;
+}
+
+/* Navbar brand text */
+.navbar-brand {
+    color: #EDE6E3 !important;
+    font-weight: 600;
+}
+
+/* Navbar links */
+.navbar .nav-link {
+    color: #EDE6E3 !important;
+    font-weight: 600;
+}
+
+/* Hover state */
+.navbar .nav-link:hover {
+    color: #D3E4E7 !important;
+}
+
+/* Active tab */
+.navbar .nav-link.active {
+    background-color: #133E43 !important;
+    color: #D3E4E7 !important;
+    border-bottom: 3px solid #D3E4E7 !important;
+}
+
+/* ---------------------------------
+   VALUE BOXES (Quarto Cards)
+---------------------------------- */
+
+.card {
+    border-radius: 6px !important;
+}
+
+.card-title,
+.card-text {
+    color: #246A73 !important;
+}
+
+/* ---------------------------------
+   DATA TABLE (DT) STYLING
+---------------------------------- */
+
+/* Header background */
+table.dataTable thead th {
+    background-color: #246A73 !important;
+    color: #ffffff !important;
+}
+
+/* Row hover */
+table.dataTable tbody tr:hover {
+    background-color: #EDE6E3 !important;
+}
+
+/* Selected row */
+table.dataTable tbody tr.selected {
+    background-color: #F06449 !important;
+    color: white !important;
+}
+
+/* Smaller font */
+table.dataTable td,
+table.dataTable th {
+    font-size: 12px !important;
+}
+
+/* ---------------------------------
+   TABS (Bootstrap 5)
+---------------------------------- */
+
+.nav-tabs .nav-link {
+    color: #133E43 !important;
+    font-weight: 500;
+}
+
+.nav-tabs .nav-link:hover {
+    color: #246A73 !important;
+    border-color: #F06449 !important;
+}
+
+.nav-tabs .nav-link.active {
+    background-color: #246A73 !important;
+    color: white !important;
+    border-color: #246A73 !important;
+}

@@ -4,11 +4,102 @@ output:
   flexdashboard::flex_dashboard:
     orientation: rows
     vertical_layout: fill
-    theme:
-      version: 4
-      bootswatch: minty
 runtime: shiny
 ---
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cabin:wght@400;500;600;700&display=swap');
+
+body, 
+h1, h2, h3, h4, h5, h6, 
+.navbar, 
+.section.level1, 
+.section.level2 {
+  font-family: 'Cabin', sans-serif;
+}
+
+.navbar.navbar-inverse {
+  background-color: #133E43 !important;
+  border-color: #133E43 !important;
+}
+
+/* Navbar text */
+.navbar.navbar-inverse .navbar-brand,
+.navbar.navbar-inverse .navbar-nav > li > a {
+  color: #EDE6E3 !important;
+  font-weight: 600;
+}
+
+/* Hover state for navbar tabs */
+.navbar-inverse .navbar-nav > li > a:hover {
+  background-color: #133E43 !important;
+  color: #D3E4E7 !important;
+}
+
+/* Active tab (open tab) */
+.navbar-inverse .navbar-nav > .active > a,
+.navbar-inverse .navbar-nav > .active > a:focus,
+.navbar-inverse .navbar-nav > .active > a:hover {
+  background-color: #133E43 !important;
+  color: #D3E4E7 !important;
+}
+
+/* Change main number (value) color */
+.value-box .value {
+  color: #246A73 !important;
+}
+
+/* Change caption (label) color */
+.value-box .caption {
+  color: #246A73 !important;
+}
+
+/* Rounded corners for value boxes */
+.value-box {
+  border-radius: 6px !important;     
+}
+
+/* Header styling */
+table.dataTable thead th {
+  background-color: #246A73 !important;
+  color: white !important;
+}
+
+/* Row hover color */
+table.dataTable tbody tr:hover {
+  background-color: #EDE6E3 !important;
+}
+
+/* Selected row color */
+table.dataTable tbody tr.selected {
+  background-color: #F06449 !important;
+  color: white !important;
+}
+
+/* Smaller DT table font */
+table.dataTable td,
+table.dataTable th {
+  font-size: 12px !important; 
+}
+
+
+/* Hover state */
+.nav-tabs > li > a:hover {
+color: #246A73 !important;
+border: 1px solid #F06449;
+}
+
+/* Active tab */
+.nav-tabs > li.active > a,
+.nav-tabs > li.active > a:focus,
+.nav-tabs > li.active > a:hover {
+background-color: #246A73 !important;
+color: white !important;
+border: 1px solid #246A73;
+}
+
+</style>
+
 
 ```{r setup, include=FALSE}
 library(flexdashboard)
@@ -23,6 +114,7 @@ library(scales)
 library(lubridate)
 library(ggridges)
 library(flexdashboard)
+library(patchwork)
 ```
 
 
@@ -31,11 +123,121 @@ library(flexdashboard)
 movies_clean <- read_rds("data/movies_clean.rds")
 ```
 
+```{r}
+#colors 
+my_colorscale <- list(
+  list(0, "#A7C9CF"),  # light tint
+  list(0.5, "#246A73"), # your original color
+  list(1, "#0F3A40")    # darker shade
+)
+
+teal_246A73_gradient <- list(
+  list(0.00, "#D3E4E7"),
+  list(0.10, "#B1D1D6"),
+  list(0.20, "#8FBEC5"),
+  list(0.30, "#6DAAB4"),
+  list(0.40, "#4B96A3"),
+  list(0.50, "#246A73"),  # base color
+  list(0.60, "#1F5C64"),
+  list(0.70, "#194D54"),
+  list(0.80, "#133E43"),
+  list(0.90, "#0D2E31"),
+  list(1.00, "#071F20")
+)
+
+teal_soft_gradient <- list(
+  list(0.00, "#B1D1D6"),
+  list(0.20, "#8FBEC5"),  
+  list(0.40, "#3F7A8A"),  
+  list(0.60, "#246A73"), 
+  list(0.80, "#194D54"),  
+  list(1.00, "#071F20")  
+)
+
+teal_246A73_to_purple_gradient <- list(
+  list(0.00, "#A8D1D6"),
+  list(0.071, "#84B7C0"),
+  list(0.143, "#609DAA"),
+  list(0.214, "#3C8394"),
+  list(0.286, "#246A73"),
+  list(0.357, "#285F76"),
+  list(0.429, "#2C5579"),
+  list(0.500, "#304B7C"),
+  list(0.571, "#34417F"),
+  list(0.643, "#383782"),
+  list(0.714, "#3C2D85"),
+  list(0.786, "#402388"),
+  list(0.857, "#44198B"),
+  list(0.929, "#480F8E"),
+  list(1.00, "#4C0591")
+)
+
+abb_colors <- list(
+  list(0.000, "#A8D1D6"),
+  list(0.143, "#72AAB5"),
+  list(0.286, "#3C8394"),
+  list(0.429, "#246A73"),
+  list(0.571, "#2C5579"),
+  list(0.714, "#34407F"),
+  list(0.857, "#3C2B85"),
+  list(1.000, "#44168B")
+)
+
+gradient_colors <- sapply(abb_colors, function(x) x[[2]])
+
+```
+
 # Home 
 
-**Welcome to Movie Prophet!**
+<div style="display: flex;">
+
+<div style="flex: 3; padding-right: 3px;">
+
+<span style="color: #246A73;font-size: 30px;">Welcome to Movie Prophet!</span>
+
+<span style="color: #246A73;">**About this dashboard**</span>
+
+This dashboard explores and analyzes factors that influence popularity of American movies released between 2000-2025. Factors such as genre, time of year of release, and director of the movie are included. The goal of the dashboard is to allow studios and investors to explore the trends in preferences of the audiences consuming American movies, and what factors to consider when making a new movie/investing in a new movie, for high box office sales. 
+
+The first sections of the dashboard include detailed visualizations showcasing the relationship between key factors and movie performance, measured by box office revenue. This includes interactive graphs showing how preferences for genres have changed over time, performance of movies by release time, and the most well-performing genres. 
+
+The second part of the dashboard includes machine learning models to determine if movie box office revenue can be predicted by the factors explored in the dashboard (e.g., genre, director, time of year of release). The performance of each of the models is featured, and the model that performs the best will be identified.
+
+</div>
+
+<div style="flex: 1.3; margin-left: -30px; text-align: right;">
+<div style="text-align:right">
+<img src="movies.jpg.webp" style="width:80%; max-width:300px; border-radius:8px;">
+</div>
+</div>
+
+</div>
+
+<span style="color: #246A73;">**How to use this dashboard**</span>
+
+<span style = "color:#246A73;">Overview</span>
+
+This tab includes general information such as average rating across all movies, and total box office revenue from all movies included in the dashboard. Additionally, this tab features an interactive data table that allows the user to search by a variety of variables such as movie title, IMDB rating, or length of movie. 
+
+<span style = "color:#246A73;">Market Analysis</span>
+
+This tab features data visualizations on box office revenue by different variables such as month of movie release, distribution of box office revenues for American films from 2000-2025, and top movies by box office revenue. 
+
+<span style = "color:#246A73;">Genre Analysis</span>
+
+This tab features different analyses focusing on which genres tend to have higher box office revenues, and additionally, which combination of genres tend to have higher box office revenues. 
+
+<span style = "color:#246A73;">Time Trends</span>
+
+This tab features changes in various movie parameters over time. This includes average IMDB ratings, MPA film rating, and number of movies released each year.  
+
+<span style = "color:#246A73;">Movie Success Prediction</span>
 
 
+<span style="color: #246A73;">**Data Sources**</span>
+
+1. Wikipedia List of American Films released between 2000-2025 (up until November 16 2025)
+2. OMDB API for box office revenue, IMDB ratings, genre, director, and other variables.
 
 
 # Overview 
@@ -46,9 +248,8 @@ Row {data-height=100}
 ```{r include= FALSE}
 #| warning: false
 create_overview_cards <- function(data) {
-  # Calculate key statistics using adjusted values
   total_movies <- nrow(data)
-  total_revenue <- sum(data$BoxOffice_adjusted, na.rm = TRUE) # Using adjusted
+  total_revenue <- sum(data$BoxOffice_adjusted, na.rm = TRUE)
   avg_rating <- mean(data$imdbRating, na.rm = TRUE)
   date_range <- paste(
     min(data$Released_year, na.rm = TRUE),
@@ -56,21 +257,12 @@ create_overview_cards <- function(data) {
     max(data$Released_year, na.rm = TRUE)
   )
 
-  # Extract unique counts
-  all_directors <- unlist(str_split(data$Director, ", "))
-  unique_directors <- n_distinct(all_directors[!is.na(all_directors)])
-
-  all_genres <- unlist(str_split(data$Genre, ", "))
-  unique_genres <- n_distinct(all_genres[!is.na(all_genres)])
-
   # Return as list for display
   list(
     total_movies = total_movies,
     total_revenue = dollar(total_revenue),
     avg_rating = round(avg_rating, 2),
-    date_range = date_range,
-    unique_directors = (unique_directors),
-    unique_genres = unique_genres
+    date_range = date_range
   )
 }
 
@@ -81,170 +273,32 @@ cards <- create_overview_cards(movies_clean)
 
 ```{r}
 renderValueBox({
-  valueBox( icon = "film", color = "#b73779",value = cards$total_movies)})
+  valueBox(color = "#EDE6E3",value = cards$total_movies)})
 ```
 
 
 ### Total Revenue in 2025 Dollars {.value-box}
 ```{r}
 renderValueBox({
-  valueBox( icon = "film", color = "#b73779",value = cards$total_revenue)})
+  valueBox(color = "#EDE6E3",value = cards$total_revenue)})
 ```
 
 
-### Average Rating {.value-box}
+### Average IMDB Rating {.value-box}
 ```{r}
 renderValueBox({
-  valueBox( icon = "star", color = "#b73779",value = cards$avg_rating)})
+  valueBox(color = "#EDE6E3",value = cards$avg_rating)})
 ```
 
 
 ### Date Range of Released Movies {.value-box}
 ```{r}
 renderValueBox({
-  valueBox( icon = "star", color = "#b73779",value = cards$date_range)})
+  valueBox(color = "#EDE6E3",value = cards$date_range)})
 ```
 
-
-Column {.tabset data-width=200}
+Row {data-height=400}
 -----------------------------------------------------------------------
-### Primary Genre Heatmap 
-
-```{r}
-create_genre_treemap <- function(data) {
-  genre_stats <- data %>%
-    separate_rows(Genre, sep = ", ") %>%
-    group_by(Genre) %>%
-    summarise(
-      total_revenue = sum(BoxOffice_adjusted, na.rm = TRUE),
-      movie_count = n(),
-      avg_rating = mean(imdbRating, na.rm = TRUE),
-      .groups = "drop"
-    ) %>%
-    filter(movie_count >= 10) %>%
-    mutate(
-      label = paste0(
-        "Genre: ", Genre,
-        "<br>Revenue: $", round(total_revenue / 1e9, 1), "B",
-        "<br>Movies: ", movie_count,
-        "<br>Rating: ", round(avg_rating, 1)
-      )
-    )
-
-  plot_ly(
-    data = genre_stats,
-    type = "treemap",
-    labels = ~Genre,
-    parents = NA,
-    values = ~total_revenue,
-    customdata = ~label,
-    hovertemplate = "%{customdata}<extra></extra>",
-    marker = list(
-      colors = ~avg_rating,
-      colorscale = "Inferno",
-      showscale = TRUE
-    )
-  )
-}
-
-```
-
-```{r}
-plotlyOutput("treemap")
-```
-
-```{r}
-output$treemap <- renderPlotly({
-  create_genre_treemap(movies_clean)
-})
-```
-
-### Secondary Genre Heatmap 
-
-```{r}
-create_second_genre_treemap <- function(data) {
-  genre_stats <- data %>%
-    filter(str_detect(Genre, ", ")) %>%
-    mutate(secondary_genre = str_split(Genre, ", ", simplify = TRUE)[, 2]) %>%
-    filter(!is.na(secondary_genre), secondary_genre != "") %>%
-    group_by(secondary_genre) %>%
-    summarise(
-      total_revenue = sum(BoxOffice_adjusted, na.rm = TRUE),
-      movie_count = n(),
-      avg_rating = mean(imdbRating, na.rm = TRUE),
-      .groups = "drop"
-    ) %>%
-    filter(movie_count >= 10) %>%
-    mutate(
-      label = paste0(
-        "Secondary Genre: ", secondary_genre,
-        "<br>Revenue: $", round(total_revenue / 1e9, 1), "B",
-        "<br>Movies: ", movie_count,
-        "<br>Rating: ", round(avg_rating, 1)
-      )
-    )
-
-  plot_ly(
-    data = genre_stats,
-    type = "treemap",
-    labels = ~secondary_genre,
-    parents = NA,
-    values = ~total_revenue,
-    customdata = ~label,
-    hovertemplate = "%{customdata}<extra></extra>",
-    marker = list(
-      colors = ~avg_rating,
-      colorscale = "Inferno",
-      showscale = TRUE
-    )
-  )
-}
-
-```
-
-```{r}
-plotlyOutput("heatmap")
-```
-
-```{r}
-output$heatmap <- renderPlotly({
-  create_second_genre_treemap(movies_clean)
-})
-```
-
-Column {data-width=350}
----------------------------------------------------------
-### Box Office Revenue Distribution
-
-```{r}
-#BOX OFFICE DISTRIBUTION - Show both nominal and adjusted
-create_box_office_distribution <- function(data) {
-  p1 <- data %>%
-    filter(BoxOffice_adjusted > 0) %>%
-    ggplot(aes(x = BoxOffice_adjusted / 1e6)) +
-    geom_histogram(bins = 50, fill = "#de4968", alpha = 0.8) +
-    scale_x_log10(
-      breaks = c(0.1, 1, 10, 100, 1000, 10000),
-      labels = c("0.1", "1", "10", "100", "1K", "10K")
-    ) +
-    labs(
-      title = "Box Office Distribution - Inflation Adjusted (2024 dollars)",
-      x = "Box Office (Million USD)",
-      y = "Number of Movies"
-    ) +
-    theme_minimal()
-
-  plotly::ggplotly(p1)
-}
-
-```
-
-```{r}
-log_dist <- create_box_office_distribution(movies_clean)
-log_dist
-```
-
-# Movie Explorer
 
 ### Movie Interactive Database (2000-2025)
 
@@ -328,14 +382,14 @@ create_data_table <- function(data) {
 
   # Create data table
   datatable(
-    table_data,
+    table_data, 
     filter = 'top',
     rownames = FALSE,
     options = list(
       pageLength = 25,
       searchHighlight = TRUE,
       paging = TRUE,
-      dom = 'Bfrtip',
+      dom = 'Brtip',
       buttons = c('copy', 'csv', 'excel'),
       columnDefs = list(
         list(className = 'dt-center', targets = c(1, 6, 7, 8, 9)),
@@ -364,7 +418,380 @@ movies_table <- create_data_table(movies_clean)
 movies_table
 ```
 
+# Market Analysis
+
+Column {.tabset}
+---------------------------------------------------
+
+### Seasonal Movie Performance
+
+```{r}
+# Data
+seasonal_data <- movies_clean %>%
+  filter(!is.na(Released)) %>%
+  mutate(
+    month = month(Released, label = TRUE)
+  ) %>%
+  group_by(month) %>%
+  summarise(
+    avg_revenue = mean(BoxOffice_adjusted, na.rm = TRUE) / 1e6,
+    movie_count = n(),
+    avg_rating = mean(imdbRating, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    month_full = month.name[as.numeric(month)],
+    month_num = as.numeric(month),
+    theta = (month_num - 1) * 30 
+  )
+
+# Server Logic 
+output$season <- renderPlotly({
+  p <- ggplot(
+    seasonal_data,
+    aes(
+      x = month,
+      y = movie_count,
+      fill = avg_rating,
+      text = paste(
+        "<b>", month_full, "</b>",
+        "<br>Avg Revenue: $", round(avg_revenue, 1), "M",
+        "<br>Movies Released:", movie_count,
+        "<br>Avg Rating:", round(avg_rating, 2)
+      )
+    )
+  ) +
+    geom_col(color = "white", width = 1) +
+    coord_polar(start = 0) +
+    theme_minimal() +
+    theme(
+      axis.title = element_blank(),
+      axis.text.y = element_blank(),
+      panel.grid.minor = element_blank(),
+      legend.position = "bottom"
+    )
+  
+  ggplotly(p, height = 500, tooltip = "text")
+})
+
+# Output 
+plotlyOutput('season')
+```
+
+
+### Top 20 Movies by Box Office Revenue
+
+```{r}
+# Data
+top_20 <- movies_clean %>%
+  group_by(Year) %>%
+  arrange(desc(BoxOffice_adjusted)) %>%
+  slice_head(n = 20) %>%
+  ungroup()
+
+years <- sort(unique(movies_clean$Year))
+years <- years[-length(years)]
+  
+# UI
+selectInput('Year', 'Year', choices = years , selected = "2024")
+
+# Server
+
+output$top20 <- renderPlotly({
+  data_filtered <- top_20 %>%
+    filter(Year == input$Year)
+  
+  p <- ggplot(
+    data_filtered,
+    aes(x = BoxOffice_adjusted, y = reorder(Title, BoxOffice_adjusted), text = paste(
+        "Box Office Revenue:", "$",BoxOffice_adjusted,
+        "<br>Title:", Title,
+        "<br>Metacritic Score:", Metascore,
+        "<br>IMDB Rating:", imdbRating))
+  ) +
+    geom_segment(aes(xend = 0, yend = Title), color = "#071F20") +  
+    geom_point(aes(color = imdbRating), size = 3) +
+    scale_x_continuous(labels = scales::dollar_format(scale = 1e-6, suffix = "M")) +
+    scale_color_gradientn(colors = gradient_colors)+
+    theme_minimal() +
+    labs(
+      title = paste("Top 20 Movies by Box Office Revenue -", input$Year),
+      x = "Box Office Revenue (Millions)",
+      y = "",
+      color = "IMDB Rating"
+    )
+  
+  ggplotly(p, height = 500, tooltip = "text") 
+})
+
+# Output 
+plotlyOutput('top20')
+```
+
+
+### Box Office Revenue Distribution
+
+```{r}
+create_box_office_distribution <- function(data) {
+  p1 <- data %>%
+    filter(BoxOffice_adjusted > 0) %>%
+    ggplot(aes(x = BoxOffice_adjusted / 1e6, fill = after_stat(x))) +
+    geom_histogram(bins = 50, alpha = 0.8) +
+    scale_fill_gradientn(
+      colours = gradient_colors)+
+    scale_x_log10(
+      breaks = c(0.1, 1, 10, 100, 1000, 10000),
+      labels = c("0.1", "1", "10", "100", "1K", "10K")
+    ) +
+    labs(
+      title = "Box Office Distribution - Inflation Adjusted (2024 dollars)",
+      x = "Box Office (Million USD)",
+      y = "Number of Movies"
+    ) +
+    theme_minimal()
+
+  plotly::ggplotly(p1)
+}
+
+```
+
+```{r}
+log_dist <- create_box_office_distribution(movies_clean)
+log_dist
+```
+
+### 
+```{r}
+# Data
+rated_movies <- movies_clean %>%
+  filter(!is.na(Rated)) %>% 
+  mutate(
+    # Combine "Unrated" and "Not Rated" into a single category
+    Rated = case_when(
+      Rated %in% c("Unrated", "Not Rated") ~ "Unrated/Not Rated",
+      TRUE ~ Rated
+    )
+  ) %>%
+  group_by(Rated) %>%
+  summarize(
+    number_movies = n(), 
+    average_revenue = mean(BoxOffice_adjusted, na.rm = TRUE),
+    .groups = 'drop'
+  ) %>%
+   arrange(desc(average_revenue))
+
+# Server logic for first plot
+
+output$rating <- renderPlotly({
+  p <- ggplot(
+    rated_movies,
+    aes(x = - average_revenue, y = reorder(Rated, average_revenue))
+  ) +
+    geom_col()+
+    theme_minimal()+
+    labs(x = "Average Box Office Revenue ($)", y = "MPA Film Rating")
+  
+q <- ggplot(
+  rated_movies, 
+  aes(x = number_movies, y = reorder(Rated, average_revenue))
+) +
+  geom_col() +
+  theme_minimal()+
+  labs(x = "Number of Movies", y = "Number of Movies")
+  
+mirror_plot <- p | q
+mirror_plot
+  
+  ggplotly(p, height = 500)
+})
+
+
+
+# Output
+plotlyOutput('rating')
+  
+```
+
+
+
+### Movie Count by MPA Film Rating
+```{r}
+rated_movies <- movies_clean %>%
+  group_by(Rated) %>%
+  summarize(number_movies = n(), 
+            average_revenue = mean(BoxOffice_adjusted, na.rm = TRUE),
+            .groups = 'drop') 
+
+plot_ly(
+  data = rated_movies,
+  labels = ~Rated,
+  values = ~number_movies,
+  type = "pie"
+) %>%
+  layout(
+    title = "Distribution of Movies by Rating"
+  )
+```
+
+### Average Revenue by MPA Film Rating
+```{r}
+rated_movies <- movies_clean %>%
+  group_by(Rated) %>%
+  summarize(number_movies = n(), 
+            average_revenue = mean(BoxOffice_adjusted, na.rm = TRUE),
+            .groups = 'drop') 
+plot_ly(
+  data = rated_movies,
+  x = ~Rated,
+  y = ~average_revenue,
+  type = "bar"
+) %>%
+  layout(
+    title = "Average Revenue by Rating",
+    xaxis = list(title = "Rating"),
+    yaxis = list(title = "Average Adjusted Box Office")
+  )
+
+
+```
+
 # Genre Analysis
+
+Column {.tabset data-width=350}
+-----------------------------------------------------------------------
+### Primary Genre Heatmap 
+
+```{r}
+# Data
+genre_stats <- movies_clean %>%
+    group_by(Genre1) %>%
+    summarise(
+      total_revenue = sum(BoxOffice_adjusted, na.rm = TRUE),
+      movie_count = n(),
+      avg_rating = mean(imdbRating, na.rm = TRUE),
+      .groups = "drop"
+    ) %>%
+    filter(movie_count >= 10) 
+
+choice = c("Number of Movies" = "movie_count", "Total Box Office Revenue" = "total_revenue")
+
+# UI 
+selectInput('visual', 'Visualize by', choice, selected = "movie_count")
+
+# Server Logic 
+
+output$treemap <- renderPlotly({
+  
+  req(input$visual)  # Ensure input exists
+  
+  p <- ggplot(
+    genre_stats,
+    aes(
+      area = .data[[input$visual]], 
+      fill = avg_rating, 
+      label = paste0(Genre1, "\n", 
+                     ifelse(input$visual == "movie_count", 
+                            paste(.data[[input$visual]], "movies"),
+                            paste0("$", round(.data[[input$visual]]/1e9, 1), "B")))
+    )
+  ) +
+    geom_treemap(color = "white", size = 2) +
+    geom_treemap_text(
+      color = "white",
+      fontface = "bold",
+      size = 10,
+      place = "center"
+    ) +
+    scale_fill_viridis_c(
+      name = "Avg\nIMDB\nRating",
+      option = "plasma"
+    ) +
+    theme_void() + 
+    labs(
+      title = paste("Movies by Genre -", names(choice)[choice == input$visual])
+    )
+  
+  ggplotly(p, tooltip = "text") %>%
+    layout(
+      title = list(text = paste("Movies by Genre -", names(choice)[choice == input$visual]), x = 0.5)
+    )
+})
+
+#Output 
+plotlyOutput("treemap")
+```
+
+
+
+### Secondary Genre Heatmap 
+
+```{r}
+create_second_genre_treemap <- function(data) {
+  genre_stats <- data %>%
+    filter(str_detect(Genre, ", ")) %>%
+    mutate(secondary_genre = str_split(Genre, ", ", simplify = TRUE)[, 2]) %>%
+    filter(!is.na(secondary_genre), secondary_genre != "") %>%
+    group_by(secondary_genre) %>%
+    summarise(
+      total_revenue = sum(BoxOffice_adjusted, na.rm = TRUE),
+      movie_count = n(),
+      avg_rating = mean(imdbRating, na.rm = TRUE),
+      .groups = "drop"
+    ) %>%
+    filter(movie_count >= 10) %>%
+    mutate(
+      label = paste0(
+        "Secondary Genre: ", secondary_genre,
+        "<br>Revenue: $", round(total_revenue / 1e9, 1), "B",
+        "<br>Movies: ", movie_count,
+        "<br>Rating: ", round(avg_rating, 1)
+      ),
+      text_color = ifelse(avg_rating > 6.0, "#EDE6E3", "#231F20")
+    )
+
+  plot_ly(
+    data = genre_stats,
+    type = "treemap",
+    labels = ~secondary_genre,
+    parents = NA,
+    values = ~total_revenue,
+    customdata = ~label,
+    hovertemplate = "%{customdata}<extra></extra>",
+    textposition = "middle center",
+    marker = list(
+      colors = ~avg_rating,
+      colorscale = abb_colors,
+    line = list(color = "#FFFFFF", width = 1.5),
+    showscale = TRUE
+  ),
+  textfont = list(
+    color = ~text_color,
+    size = 14
+  )
+) %>%
+  layout(
+    font = list(
+      family = "Cabin",
+      color = "#231F20"
+    ),
+    paper_bgcolor = "#EDE6E3",
+    plot_bgcolor  = "#EDE6E3",
+    margin = list(l = 10, r = 10, t = 40, b = 10)
+  )
+}
+
+```
+
+```{r}
+plotlyOutput("heatmap")
+```
+
+```{r}
+output$heatmap <- renderPlotly({
+  create_second_genre_treemap(movies_clean)
+})
+```
+
 ### Genre Success Matrix 
 ```{r}
 create_genre_combinations <- function(data) {
@@ -403,7 +830,7 @@ create_genre_combinations <- function(data) {
     y = ~secondary_genre,
     z = ~revenue_millions,
     type = "heatmap",
-    colorscale = "Viridis",
+    colorscale = teal_246A73_to_purple_gradient,
     text = ~paste(round(avg_rating, 1)),
     texttemplate = "%{text}",
     textfont = list(color = "white", size = 12),
@@ -420,12 +847,12 @@ create_genre_combinations <- function(data) {
   layout(
     title = list(
       text = "Genre Combination Performance Heatmap",
-      font = list(size = 16, family = "Arial", color = "black")
+      font = list(size = 16, family = "Cabin", color = "#231F20")
     ),
     xaxis = list(
       title = list(
         text = "Primary Genre",
-        font = list(size = 12, family = "Arial", color = "black")
+        font = list(size = 12, family = "Cabin", color = "#231F20")
       ),
       tickangle = 45,
       tickfont = list(size = 10)
@@ -433,11 +860,11 @@ create_genre_combinations <- function(data) {
     yaxis = list(
       title = list(
         text = "Secondary Genre",
-        font = list(size = 12, family = "Arial", color = "black")
+        font = list(size = 12, family = "Cabin", color = "#231F20")
       ),
       tickfont = list(size = 10)
     ),
-    font = list(family = "Arial"),
+    font = list(family = "Cabin"),
     plot_bgcolor = "white",
     paper_bgcolor = "white",
     margin = list(l = 80, r = 80, t = 80, b = 100)
@@ -468,126 +895,109 @@ output$genre_heatmap <- renderPlotly({
 plotlyOutput("genre_heatmap")
 ```
 
-### Seasonal Movie Performance
+
+
+# Time Trends {data-navmenu="Time Trends"}
 
 ```{r}
-create_seasonal_analysis <- function(data) {
-  seasonal_data <- data %>%
-    filter(!is.na(Released)) %>%
-    mutate(
-      month = month(Released, label = TRUE),
-      week = week(Released),
-      quarter = quarter(Released)
-    ) %>%
-    group_by(month) %>%
-    summarise(
-      avg_revenue = mean(BoxOffice_adjusted, na.rm = TRUE) / 1e6,
-      movie_count = n(),
-      avg_rating = mean(imdbRating, na.rm = TRUE),
-      blockbuster_pct = sum(BoxOffice_adjusted > 500000000, na.rm = TRUE) /
-        n() * 100,
-      .groups = "drop"
-    ) %>%
-    mutate(
-      # Create hover text
-      hover_text = paste(
-        "<b>", month, "</b><br>",
-        "Avg Revenue: $", round(avg_revenue, 1), "M<br>",
-        "Movies Released: ", movie_count, "<br>",
-        "Avg Rating: ", round(avg_rating, 2), "/10<br>",
-        "Blockbuster %: ", round(blockbuster_pct, 1), "%"
-      ),
-      # Convert month to numeric for polar coordinates
-      month_num = as.numeric(month),
-      # Calculate angles for polar plot (360 degrees / 12 months)
-      theta = (month_num - 1) * 30  # 0, 30, 60, ..., 330 degrees
-    )
-
-  # Create interactive polar plot
-  polar_plot <- plot_ly(
-    data = seasonal_data,
-    type = "barpolar",
-    theta = ~theta,
-    r = ~avg_revenue,
-    text = ~movie_count,
-    textposition = "inside",
-    textfont = list(color = "white", size = 12),
-    hovertemplate = "%{customdata}<extra></extra>",
-    customdata = ~hover_text,
-    marker = list(
-      color = ~avg_rating,
-      colorscale = "Viridis",
-      colorbar = list(
-        title = list(
-          text = "Average Rating",
-          font = list(size = 12)
-        ),
-        titleside = "right"
-      ),
-      line = list(color = "white", width = 1)
-    )
-  ) %>%
-  layout(
-    title = list(
-      text = "Seasonal Movie Performance Analysis",
-      font = list(size = 16, family = "Arial")
-    ),
-    polar = list(
-      angularaxis = list(
-        tickvals = seq(0, 330, 30),
-        ticktext = month.abb,
-        direction = "clockwise",
-        rotation = 90,
-        tickfont = list(size = 11)
-      ),
-      bgcolor = "rgba(0,0,0,0)"
-    ),
-    font = list(family = "Arial"),
-    paper_bgcolor = "white",
-    plot_bgcolor = "white"
-  ) %>%
-  config(
-    displayModeBar = TRUE,
-    modeBarButtonsToRemove = c("pan2d", "select2d", "lasso2d", "autoScale2d"),
-    displaylogo = FALSE,
-    toImageButtonOptions = list(
-      format = "png",
-      filename = "seasonal_analysis",
-      height = 600,
-      width = 600,
-      scale = 1
-    )
+# Data
+time <- movies_clean %>%
+  group_by(Year) %>%
+  summarize(
+    count = n(),
+    IMDB = round(mean(imdbRating, na.rm = TRUE), digits = 2),
+    MetaCritic = round(mean(Metascore, na.rm = TRUE), digits = 2),
+    Runtime = round(mean(Runtime_num, na.rm = TRUE), digits = 0),
+    BoxOfficeRevenue = mean(BoxOffice_adjusted, na.rm = TRUE)
   )
-}
-```
 
-```{r}
-output$polar_season <- renderPlotly({
-  create_seasonal_analysis(movies_clean)
+options <- c(
+  'IMDB Ratings' = 'IMDB',
+  'MetaCritic Scores' = 'MetaCritic', 
+  'Runtime (min)' = 'Runtime',
+  'Box Office Revenue ($)' = 'BoxOfficeRevenue',
+  'Number of Movies' = 'count'
+)
+
+# UI for first plot
+selectInput('y', '', options, selected = "IMDB")
+
+# Server logic for first plot
+
+output$plot <- renderPlotly({
+  y_label <- names(options)[options == input$y] 
+  p <- ggplot(
+    time,
+    aes(x = Year, y = .data[[input$y]])
+  ) +
+    geom_point(color = "#480F8E", fill = "#480F8E") +
+    geom_line(color = "#246A73") + 
+    theme_minimal()+
+    labs(
+      y = y_label
+    )
+  
+  
+  ggplotly(p, height = 500)
 })
+
+# Output for first plot
+plotlyOutput('plot')
 ```
+
+# Test 2 {data-navmenu="Time Trends"}
 
 ```{r}
-plotlyOutput("polar_season")
+# Data 
+group_vars <- c("Primary Genre" = "Genre1", "Secondary Genre" = "Genre2", "Tertiary Genre" = "Genre3", "MPA Film Rating" = "Rated")
+
+# UI 
+selectInput('group', '', choices = group_vars, selected = "Genre1")
+
+# Server Logic
+output$options <- renderPlotly({
+  
+  categories <- movies_clean %>%
+    filter(!is.na(.data[[input$group]])) %>% 
+    group_by(Year, .data[[input$group]]) %>%
+    summarize(count = n(), .groups = 'drop') %>%
+    group_by(Year) %>% 
+    mutate(percentage = (count / sum(count)) * 100) %>%
+    ungroup()
+  
+  legend_label <- names(group_vars)[group_vars == input$group]
+  
+  p <- ggplot(
+    categories,
+    aes(
+      x = Year,
+      y = percentage,
+      color = .data[[input$group]],
+      group = .data[[input$group]],
+      text = paste(
+        "Year:", Year,
+        "<br>",legend_label, ":", .data[[input$group]],
+        "<br>Percentage:", round(percentage, 1), "%")
+    )
+  ) +
+    geom_point() +
+    geom_line() +
+    scale_x_continuous(breaks = 2000:2025) +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    labs(
+      y = "Percentage (%)",
+      x = "Year",
+      color = legend_label
+    )
+  
+  ggplotly(p, height = 500, tooltip = "text")
+})
+
+# Output
+plotlyOutput('options')
 ```
 
-# Top Performers
-
-```{r}
 
 
-```
-
-### Top 20 Movies by Box Office Revenue
-```{r}
-top_plots <- create_top_performers(movies_clean)
-top_plots$revenue
-```
-
-### Top 20 Performers by Genre
-
-```{r}
-top_plots <- create_top_performers(movies_clean)
-top_plots$rating
-```
-
+# Movie Success Prediction
