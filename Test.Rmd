@@ -426,58 +426,73 @@ Column {.tabset}
 ### Seasonal Movie Performance
 
 ```{r}
-# Data
-seasonal_data <- movies_clean %>%
-  filter(!is.na(Released)) %>%
-  mutate(
-    month = month(Released, label = TRUE)
-  ) %>%
-  group_by(month) %>%
-  summarise(
-    avg_revenue = mean(BoxOffice_adjusted, na.rm = TRUE) / 1e6,
-    movie_count = n(),
-    avg_rating = mean(imdbRating, na.rm = TRUE),
-    .groups = "drop"
-  ) %>%
-  mutate(
-    month_full = month.name[as.numeric(month)],
-    month_num = as.numeric(month),
-    theta = (month_num - 1) * 30 
-  )
+create_seasonal_analysis<- function(data) {
 
-# Server Logic 
-output$season <- renderPlotly({
-  p <- ggplot(
-    seasonal_data,
-    aes(
-      x = month,
-      y = movie_count,
-      fill = avg_rating,
-      text = paste(
-        "<b>", month_full, "</b>",
-        "<br>Avg Revenue: $", round(avg_revenue, 1), "M",
-        "<br>Movies Released:", movie_count,
-        "<br>Avg Rating:", round(avg_rating, 2)
-      )
+  seasonal_data <- data %>%
+    filter(!is.na(Released)) %>%
+    mutate(
+      month = month(Released, label = TRUE, abbr = TRUE),
+      month_num = month(Released),   # numeric for polar angle
+      week = week(Released),
+      quarter = quarter(Released)
+    ) %>%
+    group_by(month, month_num) %>%
+    summarise(
+      avg_revenue = mean(BoxOffice_adjusted, na.rm = TRUE) / 1e6,
+      movie_count = n(),
+      avg_rating = mean(imdbRating, na.rm = TRUE),
+      blockbuster_pct =
+        sum(BoxOffice_adjusted > 500000000, na.rm = TRUE) / n() * 100,
+      .groups = "drop"
+    ) %>%
+    arrange(month_num)
+
+  plot_ly(
+    data = seasonal_data,
+    type = "barpolar",
+    r = ~avg_revenue,
+    theta = ~month,
+    marker = list(
+      color = ~avg_rating,
+      colorscale = "Viridis",
+      line = list(color = "white", width = 1)
+    ),
+    text = ~paste0(
+      "<b>", month, "</b><br>",
+      "Avg Revenue: $", round(avg_revenue, 1), "M<br>",
+      "Movies: ", movie_count, "<br>",
+      "Avg Rating: ", round(avg_rating, 1)
+    ),
+    hoverinfo = "text"
+  ) %>%
+    layout(
+      title = list(
+        text = "Seasonal Movie Release Patterns (Inflation-Adjusted)",
+        x = 0.5
+      ),
+      polar = list(
+        radialaxis = list(
+          title = "Average Revenue (Million USD)",
+          showline = FALSE,
+          tickfont = list(size = 10)
+        ),
+        angularaxis = list(
+          direction = "clockwise",
+          period = 12
+        )
+      ),
+      showlegend = FALSE
     )
-  ) +
-    geom_col(color = "white", width = 1) +
-    coord_polar(start = 0) +
-    theme_minimal() +
-    theme(
-      axis.title = element_blank(),
-      axis.text.y = element_blank(),
-      panel.grid.minor = element_blank(),
-      legend.position = "bottom"
-    )
-  
-  ggplotly(p, height = 500, tooltip = "text")
+}
+
+#Output
+plotlyOutput("seasonal")
+
+#Server
+output$seasonal <- renderPlotly({
+  create_seasonal_analysis(movies_clean)
 })
-
-# Output 
-plotlyOutput('season')
 ```
-
 
 ### Top 20 Movies by Box Office Revenue
 
@@ -493,7 +508,7 @@ years <- sort(unique(movies_clean$Year))
 years <- years[-length(years)]
   
 # UI
-selectInput('Year', 'Year', choices = years , selected = "2024")
+selectInput('Year', '', choices = years , selected = "2024")
 
 # Server
 
@@ -553,14 +568,14 @@ create_box_office_distribution <- function(data) {
   plotly::ggplotly(p1)
 }
 
-```
-
-```{r}
+# Output
 log_dist <- create_box_office_distribution(movies_clean)
 log_dist
+
 ```
 
-### 
+
+### Banana
 ```{r}
 # Data
 rated_movies <- movies_clean %>%
@@ -659,11 +674,12 @@ plot_ly(
 
 Column {.tabset data-width=350}
 -----------------------------------------------------------------------
-### Primary Genre Heatmap 
+### Primary Genre Heatmap {data-height=900}
 
 ```{r}
-# Data
-genre_stats <- movies_clean %>%
+#Function
+create_genre_treemap <- function(data) {
+  genre_stats <- data %>%
     group_by(Genre1) %>%
     summarise(
       total_revenue = sum(BoxOffice_adjusted, na.rm = TRUE),
@@ -671,77 +687,10 @@ genre_stats <- movies_clean %>%
       avg_rating = mean(imdbRating, na.rm = TRUE),
       .groups = "drop"
     ) %>%
-    filter(movie_count >= 10) 
-
-choice = c("Number of Movies" = "movie_count", "Total Box Office Revenue" = "total_revenue")
-
-# UI 
-selectInput('visual', 'Visualize by', choice, selected = "movie_count")
-
-# Server Logic 
-
-output$treemap <- renderPlotly({
-  
-  req(input$visual)  # Ensure input exists
-  
-  p <- ggplot(
-    genre_stats,
-    aes(
-      area = .data[[input$visual]], 
-      fill = avg_rating, 
-      label = paste0(Genre1, "\n", 
-                     ifelse(input$visual == "movie_count", 
-                            paste(.data[[input$visual]], "movies"),
-                            paste0("$", round(.data[[input$visual]]/1e9, 1), "B")))
-    )
-  ) +
-    geom_treemap(color = "white", size = 2) +
-    geom_treemap_text(
-      color = "white",
-      fontface = "bold",
-      size = 10,
-      place = "center"
-    ) +
-    scale_fill_viridis_c(
-      name = "Avg\nIMDB\nRating",
-      option = "plasma"
-    ) +
-    theme_void() + 
-    labs(
-      title = paste("Movies by Genre -", names(choice)[choice == input$visual])
-    )
-  
-  ggplotly(p, tooltip = "text") %>%
-    layout(
-      title = list(text = paste("Movies by Genre -", names(choice)[choice == input$visual]), x = 0.5)
-    )
-})
-
-#Output 
-plotlyOutput("treemap")
-```
-
-
-
-### Secondary Genre Heatmap 
-
-```{r}
-create_second_genre_treemap <- function(data) {
-  genre_stats <- data %>%
-    filter(str_detect(Genre, ", ")) %>%
-    mutate(secondary_genre = str_split(Genre, ", ", simplify = TRUE)[, 2]) %>%
-    filter(!is.na(secondary_genre), secondary_genre != "") %>%
-    group_by(secondary_genre) %>%
-    summarise(
-      total_revenue = sum(BoxOffice_adjusted, na.rm = TRUE),
-      movie_count = n(),
-      avg_rating = mean(imdbRating, na.rm = TRUE),
-      .groups = "drop"
-    ) %>%
-    filter(movie_count >= 10) %>%
+    filter(movie_count >= 10) %>% 
     mutate(
       label = paste0(
-        "Secondary Genre: ", secondary_genre,
+        "Primary Genre: ", Genre1,
         "<br>Revenue: $", round(total_revenue / 1e9, 1), "B",
         "<br>Movies: ", movie_count,
         "<br>Rating: ", round(avg_rating, 1)
@@ -752,7 +701,7 @@ create_second_genre_treemap <- function(data) {
   plot_ly(
     data = genre_stats,
     type = "treemap",
-    labels = ~secondary_genre,
+    labels = ~Genre1,
     parents = NA,
     values = ~total_revenue,
     customdata = ~label,
@@ -780,17 +729,81 @@ create_second_genre_treemap <- function(data) {
   )
 }
 
+# Server
+output$treemap <- renderPlotly({
+  create_genre_treemap(movies_clean)
+})
+
+#Output 
+plotlyOutput("treemap", height = "100%")
 ```
 
-```{r}
-plotlyOutput("heatmap")
-```
+### Secondary Genre Heatmap 
 
 ```{r}
+# Function
+create_second_genre_treemap <- function(data) {
+  genre_stats <- data %>%
+    filter(!is.na(Genre2), Genre2 != "") %>%
+    group_by(Genre2) %>%
+    summarise(
+      total_revenue = sum(BoxOffice_adjusted, na.rm = TRUE),
+      movie_count = n(),
+      avg_rating = mean(imdbRating, na.rm = TRUE),
+      .groups = "drop"
+    ) %>%
+    filter(movie_count >= 10) %>%
+    mutate(
+      label = paste0(
+        "Secondary Genre: ", Genre2,
+        "<br>Revenue: $", round(total_revenue / 1e9, 1), "B",
+        "<br>Movies: ", movie_count,
+        "<br>Rating: ", round(avg_rating, 1)
+      ),
+      text_color = ifelse(avg_rating > 6.0, "#EDE6E3", "#231F20")
+    )
+
+  plot_ly(
+    data = genre_stats,
+    type = "treemap",
+    labels = ~Genre2,
+    parents = NA,
+    values = ~total_revenue,
+    customdata = ~label,
+    hovertemplate = "%{customdata}<extra></extra>",
+    textposition = "middle center",
+    marker = list(
+      colors = ~avg_rating,
+      colorscale = abb_colors,
+    line = list(color = "#FFFFFF", width = 1.5),
+    showscale = TRUE
+  ),
+  textfont = list(
+    color = ~text_color,
+    size = 14
+  )
+) %>%
+  layout(
+    font = list(
+      family = "Cabin",
+      color = "#231F20"
+    ),
+    paper_bgcolor = "#EDE6E3",
+    plot_bgcolor  = "#EDE6E3",
+    margin = list(l = 10, r = 10, t = 40, b = 10)
+  )
+}
+
+# Server
 output$heatmap <- renderPlotly({
   create_second_genre_treemap(movies_clean)
 })
+
+#Output
+plotlyOutput("heatmap")
+
 ```
+
 
 ### Genre Success Matrix 
 ```{r}
@@ -838,7 +851,7 @@ create_genre_combinations <- function(data) {
     customdata = ~hover_text,
     colorbar = list(
       title = list(
-        text = "Average Revenue<br>(2024 Million $)",
+        text = "Average Box Office Revenue<br>(2024 Million $)",
         font = list(size = 12, family = "Arial")
       ),
       titleside = "right"
@@ -882,19 +895,16 @@ create_genre_combinations <- function(data) {
     )
   )
 }
-```
 
-```{r}
+# Server
 output$genre_heatmap <- renderPlotly({
   create_genre_combinations(movies_clean)
 })
-```
 
-```{r}
-
+# Output
 plotlyOutput("genre_heatmap")
-```
 
+```
 
 
 # Time Trends {data-navmenu="Time Trends"}
@@ -955,7 +965,7 @@ group_vars <- c("Primary Genre" = "Genre1", "Secondary Genre" = "Genre2", "Terti
 selectInput('group', '', choices = group_vars, selected = "Genre1")
 
 # Server Logic
-output$options <- renderPlotly({
+output$categ <- renderPlotly({
   
   categories <- movies_clean %>%
     filter(!is.na(.data[[input$group]])) %>% 
@@ -995,7 +1005,7 @@ output$options <- renderPlotly({
 })
 
 # Output
-plotlyOutput('options')
+plotlyOutput('categ')
 ```
 
 
