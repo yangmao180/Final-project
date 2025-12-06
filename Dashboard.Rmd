@@ -113,7 +113,15 @@ library(patchwork)
 
 ```{r load data, include = FALSE}
 # Read in data
-movies_clean <- read_rds("data/movies_clean.rds")
+movies_clean <- read_rds("movies_clean.rds")
+if("Genre" %in% names(movies_clean) && !"Genre1" %in% names(movies_clean)) {
+  movies_clean <- movies_clean %>%
+    mutate(
+      Genre1 = sapply(strsplit(as.character(Genre), ", "), function(x) x[1]),
+      Genre2 = sapply(strsplit(as.character(Genre), ", "), function(x) ifelse(length(x) >= 2, x[2], NA)),
+      Genre3 = sapply(strsplit(as.character(Genre), ", "), function(x) ifelse(length(x) >= 3, x[3], NA))
+    )
+}
 ```
 
 ```{r}
@@ -486,27 +494,26 @@ plotlyOutput("seasonal")
 ```{r}
 # Data
 top_20 <- movies_clean %>%
-  group_by(Year) %>%
+  group_by(Released_year) %>%
   arrange(desc(BoxOffice_adjusted)) %>%
   slice_head(n = 20) %>%
   ungroup()
 
-years <- sort(unique(movies_clean$Year))
+years <- sort(unique(movies_clean$Released_year))
 years <- years[-length(years)]
   
 # UI
 selectInput('Year', '', choices = years , selected = "2024")
 
 # Server
-
 output$top20 <- renderPlotly({
   data_filtered <- top_20 %>%
-    filter(Year == input$Year)
+    filter(Released_year == input$Year)
   
   p <- ggplot(
     data_filtered,
     aes(x = BoxOffice_adjusted, y = reorder(Title, BoxOffice_adjusted), text = paste(
-        "Box Office Revenue:", "$",BoxOffice_adjusted,
+        "Box Office Revenue:", "$", scales::dollar(BoxOffice_adjusted),
         "<br>Title:", Title,
         "<br>Metacritic Score:", Metascore,
         "<br>IMDB Rating:", imdbRating))
@@ -514,14 +521,14 @@ output$top20 <- renderPlotly({
     geom_segment(aes(xend = 0, yend = Title), color = "#071F20") +  
     geom_point(aes(color = imdbRating), size = 3) +
     scale_x_continuous(labels = scales::dollar_format(scale = 1e-6, suffix = "M")) +
-    scale_color_gradientn(colors = gradient_colors)+
+    scale_color_gradientn(colors = gradient_colors) +
     theme_minimal() +
     labs(
       title = paste("Top 20 Movies by Box Office Revenue -", input$Year),
       x = "Box Office Revenue (Millions)",
       y = "",
       color = "IMDB Rating"
-    )+
+    ) +
     theme(text = element_text(family = "Cabin"))
   
   ggplotly(p, height = 500, tooltip = "text") 
@@ -636,74 +643,71 @@ Column {.tabset data-width=350}
 ### Primary Genre Heatmap {data-height=900}
 
 ```{r}
-#Function
-create_genre_treemap <- function(data) {
-  genre_stats <- data %>%
-    group_by(Genre1) %>%
-    summarise(
-      total_revenue = sum(BoxOffice_adjusted, na.rm = TRUE),
-      movie_count = n(),
-      avg_rating = mean(imdbRating, na.rm = TRUE),
-      .groups = "drop"
-    ) %>%
-    filter(movie_count >= 10) %>% 
-    mutate(
-      label = paste0(
-        "Primary Genre: ", Genre1,
-        "<br>Revenue: $", round(total_revenue / 1e9, 1), "B",
-        "<br>Movies: ", movie_count,
-        "<br>Rating: ", round(avg_rating, 1)
-      ),
-      text_color = ifelse(avg_rating > 6.0, "#EDE6E3", "#231F20")
+# Data 
+group_vars <- c("Primary Genre" = "Genre1", "Secondary Genre" = "Genre2", "Tertiary Genre" = "Genre3", "MPA Film Rating" = "Rated")
+
+# UI 
+selectInput('group', '', choices = group_vars, selected = "Genre1")
+
+# Server Logic
+output$categ <- renderPlotly({
+  
+  # 检查列是否存在，如果不存在则创建
+  if(input$group %in% c("Genre1", "Genre2", "Genre3") && !input$group %in% names(movies_clean)) {
+    if(input$group == "Genre1") {
+      movies_clean <- movies_clean %>%
+        mutate(Genre1 = sapply(strsplit(as.character(Genre), ", "), function(x) x[1]))
+    } else if(input$group == "Genre2") {
+      movies_clean <- movies_clean %>%
+        mutate(Genre2 = sapply(strsplit(as.character(Genre), ", "), 
+                              function(x) ifelse(length(x) >= 2, x[2], NA)))
+    } else if(input$group == "Genre3") {
+      movies_clean <- movies_clean %>%
+        mutate(Genre3 = sapply(strsplit(as.character(Genre), ", "), 
+                              function(x) ifelse(length(x) >= 3, x[3], NA)))
+    }
+  }
+  
+  categories <- movies_clean %>%
+    filter(!is.na(.data[[input$group]])) %>% 
+    group_by(Released_year, .data[[input$group]]) %>%
+    summarize(count = n(), .groups = 'drop') %>%
+    group_by(Released_year) %>% 
+    mutate(percentage = (count / sum(count)) * 100) %>%
+    ungroup()
+  
+  legend_label <- names(group_vars)[group_vars == input$group]
+  
+  p <- ggplot(
+    categories,
+    aes(
+      x = Released_year,
+      y = percentage,
+      color = .data[[input$group]],
+      group = .data[[input$group]],
+      text = paste(
+        "Year:", Released_year,
+        "<br>",legend_label, ":", .data[[input$group]],
+        "<br>Percentage:", round(percentage, 1), "%")
     )
-
-  plot_ly(
-    data = genre_stats,
-    type = "treemap",
-    labels = ~Genre1,
-    parents = NA,
-    values = ~total_revenue,
-    customdata = ~label,
-    hovertemplate = "%{customdata}<extra></extra>",
-    textposition = "middle center",
-    marker = list(
-      colors = ~avg_rating,
-      colorscale = abb_colors,
-    line = list(color = "#FFFFFF", width = 1.5),
-    showscale = TRUE
-  ),
-  textfont = list(
-    color = ~text_color,
-    size = 14
-  )
-) %>%
-  layout(
-    title = list(
-      text = "Primary Movie Genres by Total Box Office Revenue",
-      x = 0.5,  # Center the title
-      font = list(
-        family = "Cabin",
-        size = 18,
-        color = "#231F20"
-      )
-    ),
-    font = list(
-      family = "Cabin",
-      color = "#231F20"
-    ),
-    paper_bgcolor = "#FFFFFF",
-    plot_bgcolor  = "#FFFFFF",
-    margin = list(l = 10, r = 10, t = 40, b = 10)
-  )
-}
-
-# Server
-output$treemap <- renderPlotly({
-  create_genre_treemap(movies_clean)
+  ) +
+    geom_point() +
+    geom_line() +
+    scale_x_continuous(breaks = 2000:2025) +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    labs(
+      y = "Percentage (%)",
+      x = "Year",
+      color = legend_label,
+      title = paste0("Percentage of movies by ", legend_label, " from 2000 to 2025") 
+    )
+  
+  ggplotly(p, height = 500, tooltip = "text")
 })
 
-#Output 
-plotlyOutput("treemap", height = "100%")
+# Output
+plotlyOutput('categ')
 ```
 
 ### Secondary Genre Heatmap 
@@ -711,6 +715,12 @@ plotlyOutput("treemap", height = "100%")
 ```{r}
 # Function
 create_second_genre_treemap <- function(data) {
+  if(!"Genre2" %in% names(data)) {
+    data <- data %>%
+      mutate(Genre2 = sapply(strsplit(as.character(Genre), ", "), 
+                            function(x) ifelse(length(x) >= 2, x[2], NA)))
+  }
+  
   genre_stats <- data %>%
     filter(!is.na(Genre2), Genre2 != "") %>%
     group_by(Genre2) %>%
@@ -720,7 +730,10 @@ create_second_genre_treemap <- function(data) {
       avg_rating = mean(imdbRating, na.rm = TRUE),
       .groups = "drop"
     ) %>%
-    filter(movie_count >= 10) %>%
+    filter(movie_count >= 10,
+           !is.na(total_revenue),
+           !is.na(avg_rating),
+           total_revenue > 0) %>%
     mutate(
       label = paste0(
         "Secondary Genre: ", Genre2,
@@ -735,7 +748,7 @@ create_second_genre_treemap <- function(data) {
     data = genre_stats,
     type = "treemap",
     labels = ~Genre2,
-    parents = NA,
+    parents = "",
     values = ~total_revenue,
     customdata = ~label,
     hovertemplate = "%{customdata}<extra></extra>",
@@ -750,11 +763,11 @@ create_second_genre_treemap <- function(data) {
       color = ~text_color,
       size = 14
     )
-) %>%
+  ) %>%
   layout(
     title = list(
       text = "Secondary Movie Genres by Total Box Office Revenue",
-      x = 0.5,  # Center the title
+      x = 0.5,
       font = list(
         family = "Cabin",
         size = 18,
@@ -767,8 +780,9 @@ create_second_genre_treemap <- function(data) {
     ),
     paper_bgcolor = "#FFFFFF",
     plot_bgcolor  = "#FFFFFF",
-    margin = list(l = 10, r = 10, t = 60, b = 10)  # Increased top margin for title
-  )}
+    margin = list(l = 10, r = 10, t = 60, b = 10)
+  )
+}
 
 # Server
 output$heatmap <- renderPlotly({
@@ -887,7 +901,7 @@ plotlyOutput("genre_heatmap")
 ```{r}
 # Data
 time <- movies_clean %>%
-  group_by(Year) %>%
+  group_by(Released_year) %>%  # 改为 Released_year
   summarize(
     count = n(),
     IMDB = round(mean(imdbRating, na.rm = TRUE), digits = 2),
@@ -934,55 +948,49 @@ plotlyOutput('plot')
 # Test 2 {data-navmenu="Time Trends"}
 ### Trends over Time
 ```{r}
-# Data 
-group_vars <- c("Primary Genre" = "Genre1", "Secondary Genre" = "Genre2", "Tertiary Genre" = "Genre3", "MPA Film Rating" = "Rated")
+# Data
+time <- movies_clean %>%
+  group_by(Released_year) %>%
+  summarize(
+    count = n(),
+    IMDB = round(mean(imdbRating, na.rm = TRUE), digits = 2),
+    MetaCritic = round(mean(Metascore, na.rm = TRUE), digits = 2),
+    Runtime = round(mean(Runtime_num, na.rm = TRUE), digits = 0),
+    BoxOfficeRevenue = mean(BoxOffice_adjusted, na.rm = TRUE)
+  )
 
-# UI 
-selectInput('group', '', choices = group_vars, selected = "Genre1")
+options <- c(
+  'IMDB Ratings' = 'IMDB',
+  'MetaCritic Scores' = 'MetaCritic', 
+  'Runtime (min)' = 'Runtime',
+  'Box Office Revenue ($)' = 'BoxOfficeRevenue',
+  'Number of Movies' = 'count'
+)
 
-# Server Logic
-output$categ <- renderPlotly({
-  
-  categories <- movies_clean %>%
-    filter(!is.na(.data[[input$group]])) %>% 
-    group_by(Year, .data[[input$group]]) %>%
-    summarize(count = n(), .groups = 'drop') %>%
-    group_by(Year) %>% 
-    mutate(percentage = (count / sum(count)) * 100) %>%
-    ungroup()
-  
-  legend_label <- names(group_vars)[group_vars == input$group]
-  
+# UI for first plot
+selectInput('y', '', options, selected = "IMDB")
+
+# Server logic for first plot
+output$plot <- renderPlotly({
+  y_label <- names(options)[options == input$y] 
   p <- ggplot(
-    categories,
-    aes(
-      x = Year,
-      y = percentage,
-      color = .data[[input$group]],
-      group = .data[[input$group]],
-      text = paste(
-        "Year:", Year,
-        "<br>",legend_label, ":", .data[[input$group]],
-        "<br>Percentage:", round(percentage, 1), "%")
-    )
+    time,
+    aes(x = Released_year, y = .data[[input$y]])
   ) +
-    geom_point() +
-    geom_line() +
-    scale_x_continuous(breaks = 2000:2025) +
-    theme_minimal() +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    geom_point(color = "#480F8E", fill = "#480F8E") +
+    geom_line(color = "#246A73") + 
+    theme_minimal()+
     labs(
-      y = "Percentage (%)",
       x = "Year",
-      color = legend_label,
-      title = paste0("Percentage of movies by ", legend_label, " from 2000 to 2025") 
+      y = y_label,
+      title = paste0(y_label, " from 2000 to 2025") 
     )
   
-  ggplotly(p, height = 500, tooltip = "text")
+  ggplotly(p, height = 500)
 })
 
-# Output
-plotlyOutput('categ')
+# Output for first plot
+plotlyOutput('plot')
 ```
 
 
