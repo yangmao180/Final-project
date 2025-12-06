@@ -27,6 +27,8 @@ library(DT)
 library(tm)
 library(caret)
 library(stringdist)
+library(e1071)   # SVM model
+
 # Global CSS
 tags$style(HTML("
   /* Movie poster styles */
@@ -255,13 +257,27 @@ build_ensemble_model <- function(movie_data) {
                  is_holiday,
                data = train_data)
   
+  # Model 4: SVM Model
+  svm_features <- rf_features
+  
+  svm_model <- e1071::svm(
+    x      = svm_features,
+    y      = log(train_data$BoxOffice_num),
+    kernel = "radial",
+    cost   = 1,
+    gamma  = 0.1
+  )
+  
+  
   return(list(
-    gam = gam_model,
-    rf = rf_model,
-    lm = lm_model,
-    train_data = train_data,
-    test_data = test_data,
-    rf_features = rf_features
+    gam         = gam_model,
+    rf          = rf_model,
+    lm          = lm_model,
+    svm         = svm_model,      
+    train_data  = train_data,
+    test_data   = test_data,
+    rf_features = rf_features,
+    svm_features = svm_features
   ))
 }
 
@@ -305,26 +321,28 @@ predict_multiple_years <- function(movie_data, selected_movie, year_range = 2000
         votes_per_year = imdbVotes / pmax(1, 2024 - target_year)
       )
     
-    # Predictions from three models
     pred_gam <- exp(predict(models$gam, newdata = target_features))
     
     rf_features <- target_features %>%
-      select(names(models$rf_features))
+      dplyr::select(names(models$rf_features))
     pred_rf <- exp(predict(models$rf, newdata = rf_features))
     
-    pred_lm <- exp(predict(models$lm, newdata = target_features))
+    pred_lm  <- exp(predict(models$lm,  newdata = target_features))
+    pred_svm <- exp(predict(models$svm, newdata = target_features))
     
-    # Ensemble prediction
-    pred_ensemble <- mean(c(pred_gam, pred_rf, pred_lm))
+    
+    pred_ensemble <- mean(c(pred_gam, pred_rf, pred_lm, pred_svm))
     
     data.frame(
-      Year = target_year,
-      GAM = pred_gam / 1e6,
-      RandomForest = pred_rf / 1e6,
-      Linear = pred_lm / 1e6,
-      Ensemble = pred_ensemble / 1e6,
-      Is_Original = (target_year == movie_info$Released_year)
+      Year         = target_year,
+      GAM          = pred_gam / 1e6,
+      RandomForest = pred_rf  / 1e6,
+      Linear       = pred_lm  / 1e6,
+      SVM          = pred_svm / 1e6,        
+      Ensemble     = pred_ensemble / 1e6,
+      Is_Original  = (target_year == movie_info$Released_year)
     )
+
   })
   
   # Add actual box office
@@ -1403,12 +1421,14 @@ tags$div(
                       width = "100%", post = "m")
         )
       ),
-      
-      sliderInput("scenario_year_slider",
-                  "📅 Release Year",
-                  min = 2000, max = 2025, value = 2008,
-                  width = "100%"),
-      
+      # 🔒 Hidden Release Year slider (存在但用户看不到)
+tags$div(
+  style = "display: none;",
+  sliderInput("scenario_year_slider",
+              "Release Year (hidden)",
+              min = 2000, max = 2025, value = 2008,
+              width = "100%")
+),
       fluidRow(
         column(6,
           selectInput("scenario_month_select", 
@@ -1434,7 +1454,15 @@ tags$div(
                                     "Sci-Fi", "Romance", "Thriller", "Animation"),
                          selected = c("Action", "Drama"),
                          inline = TRUE),
-      
+      # ML Model selector
+      h6("ML Model", style = "margin: 10px 0 5px 0; font-weight: bold;"),
+      selectInput(
+        "scenario_model_select",
+        label = NULL,
+        choices = c("Ensemble", "GAM", "Random Forest", "Linear Regression", "SVM"),
+        selected = "Ensemble",
+        width = "100%"
+      ),
       # Run ML Analysis button
       actionButton("run_scenario_btn", 
                    "🔮 Run ML Analysis", 
@@ -1655,8 +1683,8 @@ scenario_ml_results <- eventReactive(input$run_scenario_btn, {
     # Update features with user's scenario values
     modified_features$imdbRating <- input$scenario_rating_slider
     modified_features$Runtime_num <- input$scenario_runtime_slider
-    modified_features$Released_year <- input$scenario_year_slider
-    modified_features$years_from_2000 <- input$scenario_year_slider - 2000
+    modified_features$Released_year <- original_movie$Released_year
+    modified_features$years_from_2000 <- original_movie$Released_year - 2000
     modified_features$month <- as.numeric(input$scenario_month_select)
     modified_features$is_summer <- as.numeric(input$scenario_month_select) %in% c(5, 6, 7)
     modified_features$is_holiday <- as.numeric(input$scenario_month_select) %in% c(11, 12)
@@ -1684,29 +1712,86 @@ scenario_ml_results <- eventReactive(input$run_scenario_btn, {
     # Make predictions using ensemble models
     incProgress(0.8, detail = "Making predictions...")
     
-    # Original movie predictions
+   
     pred_gam_orig <- exp(predict(models$gam, newdata = original_features))
-    rf_features_orig <- original_features[, names(models$rf_features), drop = FALSE]
-    pred_rf_orig <- exp(predict(models$rf, newdata = rf_features_orig))
-    pred_lm_orig <- exp(predict(models$lm, newdata = original_features))
-    pred_orig <- mean(c(pred_gam_orig, pred_rf_orig, pred_lm_orig))
     
-    # Modified scenario predictions
+    rf_features_orig <- original_features[, names(models$rf_features), drop = FALSE]
+    pred_rf_orig  <- exp(predict(models$rf,  newdata = rf_features_orig))
+    
+    pred_lm_orig  <- exp(predict(models$lm,  newdata = original_features))
+    
+   
     pred_gam_mod <- exp(predict(models$gam, newdata = modified_features))
+    
     rf_features_mod <- modified_features[, names(models$rf_features), drop = FALSE]
-    pred_rf_mod <- exp(predict(models$rf, newdata = rf_features_mod))
-    pred_lm_mod <- exp(predict(models$lm, newdata = modified_features))
-    pred_mod <- mean(c(pred_gam_mod, pred_rf_mod, pred_lm_mod))
+    pred_rf_mod  <- exp(predict(models$rf,  newdata = rf_features_mod))
+    
+    pred_lm_mod  <- exp(predict(models$lm,  newdata = modified_features))
+    
+    
+    
+    model_choice <- input$scenario_model_select
+    
+    if (model_choice == "GAM") {
+      
+      pred_orig_use <- pred_gam_orig
+      pred_mod_use  <- pred_gam_mod
+      
+    } else if (model_choice == "Random Forest") {
+      
+      pred_orig_use <- pred_rf_orig
+      pred_mod_use  <- pred_rf_mod
+      
+    } else if (model_choice == "Linear Regression") {
+      
+      pred_orig_use <- pred_lm_orig
+      pred_mod_use  <- pred_lm_mod
+      
+    } else if (model_choice == "SVM") {
+     
+      
+      svm_vars <- c(
+        "years_from_2000", "imdbRating", "log_votes", "Runtime_num",
+        "director_avg_revenue", "actor_avg_revenue",
+        "is_sequel", "genre_count", "is_summer", "is_holiday"
+      )
+      
+      
+      svm_train_x <- all_features[, svm_vars]
+      svm_train_y <- log(all_features$BoxOffice_num)
+      
+      svm_model <- e1071::svm(
+        x      = svm_train_x,
+        y      = svm_train_y,
+        kernel = "radial",
+        cost   = 1,
+        gamma  = 0.1
+      )
+      
+     
+      svm_orig_x <- original_features[, svm_vars, drop = FALSE]
+      svm_mod_x  <- modified_features[, svm_vars, drop = FALSE]
+      
+      pred_orig_use <- exp(predict(svm_model, newdata = svm_orig_x))
+      pred_mod_use  <- exp(predict(svm_model, newdata = svm_mod_x))
+      
+    } else {  
+      
+      pred_orig_use <- mean(c(pred_gam_orig, pred_rf_orig, pred_lm_orig))
+      pred_mod_use  <- mean(c(pred_gam_mod, pred_rf_mod, pred_lm_mod))
+    }
     
     incProgress(1, detail = "Done!")
+
     
     # Return results
     list(
-      movie_title = original_movie$Title,
-      actual_boxoffice = original_movie$BoxOffice_num / 1e6,
-      predicted_original = pred_orig / 1e6,
-      predicted_modified = pred_mod / 1e6,
-      change_percent = (pred_mod - pred_orig) / pred_orig * 100
+      movie_title        = original_movie$Title,
+      selected_model     = model_choice,
+      actual_boxoffice   = original_movie$BoxOffice_num / 1e6,
+      predicted_original = pred_orig_use / 1e6,
+      predicted_modified = pred_mod_use / 1e6,
+      change_percent     = (pred_mod_use - pred_orig_use) / pred_orig_use * 100
     )
   })
 })
@@ -1715,7 +1800,9 @@ scenario_ml_results <- eventReactive(input$run_scenario_btn, {
 renderPlotly({
   req(scenario_ml_results())
   results <- scenario_ml_results()
-  
+  print(results)
+  str(results)
+
   # Create gauge chart
   fig <- plot_ly(
     type = "indicator",
@@ -3102,6 +3189,185 @@ debug_generation <- function(step, data) {
   }
 }
 ```
+
+# Test Performance {data-icon="fa-chart-area"}
+
+## Column {data-width=70%}
+
+### Figure 1: MSE and R² Comparison
+
+```{r}
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+
+# Helper to compute metrics
+get_metrics <- function(y, yhat) {
+  mse <- mean((y - yhat)^2)
+  r2  <- 1 - sum((y - yhat)^2) / sum((y - mean(y))^2)
+  c(MSE = mse, R2 = r2)
+}
+
+# Train models and get train/test split
+models_static <- build_ensemble_model(movies_clean)
+
+test_data  <- models_static$test_data
+y_test_log <- log(test_data$BoxOffice_num)
+
+# Predictions on test set (log scale)
+
+## GAM & Linear Model: use full test_data
+pred_gam_log <- predict(models_static$gam, newdata = test_data)
+pred_lm_log  <- predict(models_static$lm,  newdata = test_data)
+
+## RF & SVM: numeric features (like training)
+rf_test_features <- test_data %>%
+  dplyr::select_if(is.numeric) %>%
+  dplyr::select(-BoxOffice_num)
+
+idx_complete <- complete.cases(rf_test_features)
+rf_test_features <- rf_test_features[idx_complete, ]
+y_test_log_rf    <- y_test_log[idx_complete]
+
+pred_rf_log  <- predict(models_static$rf,  newdata = rf_test_features)
+pred_svm_log <- predict(models_static$svm, newdata = rf_test_features)
+
+# Compute metrics for each model
+m_gam <- get_metrics(y_test_log,    pred_gam_log)
+m_lm  <- get_metrics(y_test_log,    pred_lm_log)
+m_rf  <- get_metrics(y_test_log_rf, pred_rf_log)
+m_svm <- get_metrics(y_test_log_rf, pred_svm_log)
+
+metrics_df <- tibble(
+  Model = factor(c("GAM", "Random Forest", "Linear Model", "SVM"),
+                 levels = c("GAM", "Random Forest", "Linear Model", "SVM")),
+  MSE = c(m_gam["MSE"], m_rf["MSE"], m_lm["MSE"], m_svm["MSE"]),
+  R2  = c(m_gam["R2"],  m_rf["R2"],  m_lm["R2"],  m_svm["R2"])
+)
+
+# Long format for faceted bar plot
+metrics_long <- metrics_df %>%
+  pivot_longer(cols = c(MSE, R2),
+               names_to = "Metric",
+               values_to = "Value")
+
+ggplot(metrics_long, aes(x = Model, y = Value, fill = Model)) +
+  geom_col() +
+  facet_wrap(~ Metric, scales = "free_y") +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+    axis.text.x = element_text(angle = 45, hjust = 1)  # <-- Fix overlap
+  ) +
+  labs(
+    title = "Model Performance (MSE and R²)",
+    x = "Model",
+    y = "Value"
+  )
+
+```
+
+## Column {data-width=70%}
+
+### Figure 2: Residual Density Comparison
+```{r}
+library(dplyr)
+library(ggplot2)
+library(tibble)
+
+# Fit models and get train/test split
+models_static <- build_ensemble_model(movies_clean)
+
+test_data  <- models_static$test_data
+y_test_log <- log(test_data$BoxOffice_num)
+
+# Predictions (on log scale)
+
+## GAM & Linear Model: use full test_data
+pred_gam_log <- predict(models_static$gam, newdata = test_data)
+pred_lm_log  <- predict(models_static$lm,  newdata = test_data)
+
+## RF & SVM: numeric features as in training
+rf_test_features <- test_data %>%
+  dplyr::select_if(is.numeric) %>%
+  dplyr::select(-BoxOffice_num)
+
+idx_complete      <- complete.cases(rf_test_features)
+rf_test_features  <- rf_test_features[idx_complete, ]
+y_test_log_rf     <- y_test_log[idx_complete]
+
+pred_rf_log  <- predict(models_static$rf,  newdata = rf_test_features)
+pred_svm_log <- predict(models_static$svm, newdata = rf_test_features)
+
+# Residuals = actual - predicted (log scale)
+resid_df <- bind_rows(
+  tibble(Model = "GAM",
+         residual = y_test_log - pred_gam_log),
+  tibble(Model = "Linear Model",
+         residual = y_test_log - pred_lm_log),
+  tibble(Model = "Random Forest",
+         residual = y_test_log_rf - pred_rf_log),
+  tibble(Model = "SVM",
+         residual = y_test_log_rf - pred_svm_log)
+)
+
+# Density plot of residuals
+ggplot(resid_df, aes(x = residual, fill = Model, colour = Model)) +
+  geom_density(alpha = 0.25) +
+  theme_minimal() +
+  labs(
+    title = "Residual Density Comparison Across Models",
+    x = "Residual (log Box Office)",
+    y = "Density"
+  )
+```
+
+## Column {data-width=30%}
+
+### 📘 How to Read These Graphs
+What this figure shows:
+
+Left panel (MSE): Mean Squared Error
+
+- Measures the average squared distance between predicted and true log box office.
+
+- Lower bars are better → the model’s predictions stay closer to the actual values.
+
+Right panel (R²): R-squared
+
+- Measures the fraction of variability in log box office that the model explains.
+
+- Higher bars are better → the model captures more of the real signal in the data.
+
+How to interpret the current bars
+
+Random Forest has the lowest MSE and highest R², so it is the best overall performer.
+
+SVM also performs well, with reasonably low MSE and high R², but not as strong as Random Forest.
+
+GAM and the Linear Model have larger MSE and lower R², meaning they miss more structure in the data and make less accurate predictions.
+
+Understanding Figure 2: Residual Density Comparison
+
+What this figure shows:
+
+- Each curve is the distribution of residuals (actual − predicted log box office) for one model.
+
+- The x-axis is the residual value; the y-axis is density (how often that residual size occurs).
+
+A good model will have:
+
+- Residuals clustered tightly around 0 (narrow, tall peak at 0),
+
+- And relatively few large positive or negative residuals (thin tails).
+
+How to interpret the current curves?
+
+Random Forest and SVM have sharper peaks near zero and thinner tails, indicating smaller, more consistent errors.
+
+GAM and the Linear Model show wider, flatter curves, meaning their residuals are more spread out, with more frequent large errors.
+
+If you see systematic skew (more mass on one side), that suggests the model tends to over- or under-predict for certain movies.
 
 # About {data-icon="fa-info-circle"}
 
