@@ -284,9 +284,7 @@ build_ensemble_model <- function(movie_data) {
 # PART 3: PREDICTION FUNCTIONS
 
 predict_multiple_years <- function(movie_data, selected_movie, year_range = 2000:2025) {
-  
-  cat("Preparing models for", selected_movie, "...\n")
-  
+
   # Build models once
   models <- build_ensemble_model(movie_data)
   all_features <- create_advanced_features(movie_data)

@@ -74,7 +74,7 @@ time_machine_colors <- list(
   info = "#17becf",
   gradient = c("#440154", "#31688e", "#35b779", "#fde725")
 )
-movies_clean <- read_rds("movies_clean.rds")
+movies_clean <- read_rds("data/movies_clean.rds")
 
 ```
 
