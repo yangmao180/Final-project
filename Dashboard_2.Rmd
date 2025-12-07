@@ -891,8 +891,8 @@ plotlyOutput("genre_heatmap")
 ```
 
 
-# Time Trends {data-navmenu="Time Trends"}
-### Numerical Parameters
+# Numerical Parameters {data-navmenu="Time Trends"}
+### Trends over time
 ```{r}
 # Data
 time <- movies_clean %>%
