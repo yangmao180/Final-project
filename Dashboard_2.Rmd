@@ -200,10 +200,6 @@ This tab features different analyses focusing on which genres tend to have highe
 
 This tab features changes in various movie parameters over time. This includes average IMDB ratings, MPA film rating, and number of movies released each year.  
 
-<span style = "color:#246A73;">Movie Success Prediction</span>
-
-This tab features two interactive functions, the first predicting movie performance if the movie was released in a different year, as well as an interactive function to predict movie performance based on user input. 
-
 <span style = "color:#246A73;">Machine Learning Performance</span>
 
 This tab evaluates the performance of the machine learning models used to predict movie performance in the Movie Success Prediction tab. It details which model is the best for prediction. 
@@ -992,10 +988,7 @@ output$categ <- renderPlotly({
 
 # Output
 plotlyOutput('categ')
-```
 
-# Movie Success Prediction
-```{r}
 # PART 1: FEATURE ENGINEERING
 create_advanced_features <- function(movie_data) {
   # Calculate director statistics
