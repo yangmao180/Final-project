@@ -118,7 +118,7 @@ library(randomForest)
 
 ```{r load data, include = FALSE}
 # Read in data
-movies_clean <- read_rds("data/movies_clean.rds")
+movies_clean <- read_rds("/Users/yangmao/Downloads/movies_clean.rds")
 ```
 
 ```{r}
@@ -1265,8 +1265,9 @@ predict_multiple_years <- function(movie_data, selected_movie, year_range = 2000
   return(predictions)
 }
 ```
+# What If {data-icon="fa-magic" data-orientation=columns}
 
-## Column {data-width="350"}
+## Column {data-width=350}
 
 ### 🎮 Scenario Controls
 
@@ -1363,7 +1364,7 @@ tags$div(
                       width = "100%", post = "m")
         )
       ),
-      # 🔒 Hidden Release Year slider (存在但用户看不到)
+      # 🔒 Hidden Release Year slider
 tags$div(
   style = "display: none;",
   sliderInput("scenario_year_slider",
@@ -1589,8 +1590,8 @@ output$movie_info_compact <- renderUI({
 })
 ```
 
-
-### ML Model What-If Analysis
+## Column {data-width=450}
+### ML Model What-If Analysis {data-height="60"}
 
 ```{r}
 # Calculate ML predictions based on user's scenario inputs
@@ -1809,7 +1810,7 @@ renderPlotly({
 })
 ```
 
-### Change Summary
+### Change Summary {data-height="40"}
 
 ```{r}
 # Display summary of changes and their impact on box office prediction
@@ -1878,16 +1879,6 @@ renderUI({
     '</span>',
     '</div>',
     
-    # Release year change box
-    '<div style="flex: 1; min-width: 120px; background: #f8f9fa; padding: 10px; ',
-    'border-radius: 5px; text-align: center;">',
-    '<small style="color: #6c757d;">Release Year</small><br>',
-    '<strong>', original_movie$Released_year, ' → ', input$scenario_year_slider, '</strong><br>',
-    '<span style="color: ', ifelse(year_change > 0, '#2ca02c', '#d62728'), '; font-weight: bold;">',
-    ifelse(year_change > 0, '+', ''), year_change, ' years',
-    '</span>',
-    '</div>',
-    
     # Runtime change box
     '<div style="flex: 1; min-width: 120px; background: #f8f9fa; padding: 10px; ',
     'border-radius: 5px; text-align: center;">',
@@ -1917,7 +1908,8 @@ renderUI({
 
 ```
 
-### 🧪 AI Recipe Generator {style="height:100%; overflow-y:auto;"}
+## Column {data-width=350}
+### 🧪 AI Recipe Generator
 
 ```{r}
 # HELPER FUNCTIONS
