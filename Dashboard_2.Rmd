@@ -118,7 +118,7 @@ library(randomForest)
 
 ```{r load data, include = FALSE}
 # Read in data
-movies_clean <- read_rds("/Users/yangmao/Downloads/movies_clean.rds")
+movies_clean <- read_rds("data/movies_clean.rds")
 ```
 
 ```{r}
@@ -898,7 +898,7 @@ time <- movies_clean %>%
     IMDB = round(mean(imdbRating, na.rm = TRUE), digits = 2),
     MetaCritic = round(mean(Metascore, na.rm = TRUE), digits = 2),
     Runtime = round(mean(Runtime_num, na.rm = TRUE), digits = 0),
-    BoxOfficeRevenue = mean(BoxOffice_adjusted, na.rm = TRUE)
+    BoxOfficeRevenue = mean(BoxOffice_adjusted, na.rm = TRUE) / 1e6
   )
 
 options <- c(
