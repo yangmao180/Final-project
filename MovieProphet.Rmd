@@ -1,0 +1,3286 @@
+---
+title: "Movie Prophet"
+output:
+  flexdashboard::flex_dashboard:
+    orientation: rows
+    vertical_layout: fill
+runtime: shiny
+resource_files:
+- www/movies.jpg.webp
+---
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cabin:wght@400;500;600;700&display=swap');
+
+body, 
+h1, h2, h3, h4, h5, h6, 
+.navbar, 
+.section.level1, 
+.section.level2 {
+  font-family: 'Cabin', sans-serif;
+}
+
+.navbar.navbar-inverse {
+  background-color: #133E43 !important;
+  border-color: #133E43 !important;
+}
+
+/* Navbar text */
+.navbar.navbar-inverse .navbar-brand,
+.navbar.navbar-inverse .navbar-nav > li > a {
+  color: #EDE6E3 !important;
+  font-weight: 600;
+}
+
+/* Hover state for navbar tabs */
+.navbar-inverse .navbar-nav > li > a:hover {
+  background-color: #133E43 !important;
+  color: #D3E4E7 !important;
+}
+
+/* Active tab (open tab) */
+.navbar-inverse .navbar-nav > .active > a,
+.navbar-inverse .navbar-nav > .active > a:focus,
+.navbar-inverse .navbar-nav > .active > a:hover {
+  background-color: #133E43 !important;
+  color: #D3E4E7 !important;
+}
+
+/* Change main number (value) color */
+.value-box .value {
+  color: #246A73 !important;
+}
+
+/* Change caption (label) color */
+.value-box .caption {
+  color: #246A73 !important;
+}
+
+/* Rounded corners for value boxes */
+.value-box {
+  border-radius: 6px !important;     
+}
+
+/* Header styling */
+table.dataTable thead th {
+  background-color: #246A73 !important;
+  color: white !important;
+}
+
+/* Row hover color */
+table.dataTable tbody tr:hover {
+  background-color: #EDE6E3 !important;
+}
+
+/* Smaller DT table font */
+table.dataTable td,
+table.dataTable th {
+  font-size: 12px !important; 
+}
+
+/* Hover state */
+.nav-tabs > li > a:hover {
+color: #246A73 !important;
+border: 1px solid #F06449;
+}
+
+/* Active tab */
+.nav-tabs > li.active > a,
+.nav-tabs > li.active > a:focus,
+.nav-tabs > li.active > a:hover {
+background-color: #246A73 !important;
+color: white !important;
+border: 1px solid #246A73;
+}
+
+</style>
+
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(tidyverse)
+library(plotly)
+library(DT)
+library(treemapify)
+library(ggwordcloud)
+library(networkD3)
+library(scales)
+library(lubridate)
+library(ggridges)
+library(flexdashboard)
+library(patchwork)
+library(tm)
+library(caret)
+library(stringdist)
+library(e1071)
+library(mgcv)
+library(randomForest)
+```
+
+
+```{r load data, include = FALSE}
+# Read in data
+movies_clean <- read_rds("data/movies_clean.rds")
+```
+
+```{r}
+#colors 
+teal_246A73_to_purple_gradient <- list(
+  list(0.00, "#A8D1D6"),
+  list(0.071, "#84B7C0"),
+  list(0.143, "#609DAA"),
+  list(0.214, "#3C8394"),
+  list(0.286, "#246A73"),
+  list(0.357, "#285F76"),
+  list(0.429, "#2C5579"),
+  list(0.500, "#304B7C"),
+  list(0.571, "#34417F"),
+  list(0.643, "#383782"),
+  list(0.714, "#3C2D85"),
+  list(0.786, "#402388"),
+  list(0.857, "#44198B"),
+  list(0.929, "#480F8E"),
+  list(1.00, "#4C0591")
+)
+
+abb_colors <- list(
+  list(0.000, "#A8D1D6"),
+  list(0.143, "#72AAB5"),
+  list(0.286, "#3C8394"),
+  list(0.429, "#246A73"),
+  list(0.571, "#2C5579"),
+  list(0.714, "#34407F"),
+  list(0.857, "#3C2B85"),
+  list(1.000, "#44168B")
+)
+
+gradient_colors <- sapply(abb_colors, function(x) x[[2]])
+
+```
+
+# Home 
+
+<div style="display: flex;">
+
+<div style="flex: 3; padding-right: 3px;">
+
+<span style="color: #246A73;font-size: 30px;">Welcome to Movie Prophet!</span>
+
+<span style="color: #246A73; font-weight: bold;">About this dashboard</span>
+
+This dashboard explores and analyzes factors that influence popularity of American movies released between 2000-2025. Factors such as genre, time of year of release, and MPA film rating of the movie are included. The goal of the dashboard is to allow studios and investors to explore the trends in preferences of the audiences consuming American movies, and what factors to consider when making a new movie/investing in a new movie, for high box office sales. 
+
+The first sections of the dashboard include detailed visualizations showcasing the relationship between key factors and movie performance, measured by box office revenue. This includes interactive graphs showing how preferences for genres have changed over time, performance of movies by release time, and the most well-performing genres. 
+
+The second part of the dashboard includes machine learning models to determine if movie box office revenue can be predicted by the factors explored in the dashboard (e.g., genre, runtime, time of year of release). An evaluation of each of the models is featured, and the model that performs the best will be identified.
+
+</div>
+
+<div style="flex: 1.3; margin-left: -30px; text-align: right;">
+<div style="text-align:right">
+<img src="www/movies.jpg.webp" style="width:80%; max-width:300px; border-radius:8px;">
+</div>
+</div>
+
+</div>
+
+<span style="color: #246A73; font-weight: bold;">How to use this dashboard</span>
+
+<span style = "color:#246A73;">Overview</span>
+
+This tab includes general information such as average rating across all movies, and total box office revenue from all movies included in the dashboard. Additionally, this tab features an interactive data table that allows the user to search by a variety of variables such as movie title, IMDB rating, or length of movie. 
+
+<span style = "color:#246A73;">Market Analysis</span>
+
+This tab features data visualizations on box office revenue by different variables such as month of movie release, distribution of box office revenues for American films from 2000-2025, and top movies by box office revenue. 
+
+<span style = "color:#246A73;">Genre Analysis</span>
+
+This tab features different analyses focusing on which genres tend to have higher box office revenues, and additionally, which combination of genres tend to have higher box office revenues. 
+
+<span style = "color:#246A73;">Time Trends</span>
+
+This tab features changes in various movie parameters over time. This includes average IMDB ratings, MPA film rating, and number of movies released each year.  
+
+<span style = "color:#246A73;">Machine Learning Performance</span>
+
+This tab evaluates the performance of the machine learning models used to predict movie performance in the Movie Success Prediction tab. It details which model is the best for prediction. 
+
+<span style="color: #246A73; font-weight: bold;">Data Sources</span>
+
+1. Wikipedia List of American Films released between 2000-2025 (up until November 16 2025)
+2. OMDB API for box office revenue, IMDB ratings, genre, runtime, and other variables
+3. priceR package for inflation adjustment factors 
+
+
+# Overview 
+
+Row {data-height=100}
+-----------------------------------------------------------------------
+
+```{r include= FALSE}
+#| warning: false
+create_overview_cards <- function(data) {
+  total_movies <- nrow(data)
+  total_revenue <- sum(data$BoxOffice_adjusted, na.rm = TRUE)
+  avg_rating <- mean(data$imdbRating, na.rm = TRUE)
+  date_range <- paste(
+    min(data$Released_year, na.rm = TRUE),
+    "-",
+    max(data$Released_year, na.rm = TRUE)
+  )
+
+  # Return as list for display
+  list(
+    total_movies = total_movies,
+    total_revenue = dollar(total_revenue),
+    avg_rating = round(avg_rating, 2),
+    date_range = date_range
+  )
+}
+
+cards <- create_overview_cards(movies_clean)
+```
+
+### Total Number of Movies {.value-box}
+
+```{r}
+renderValueBox({
+  valueBox(color = "#EDE6E3",value = cards$total_movies)})
+```
+
+
+### Total Revenue in 2025 Dollars {.value-box}
+```{r}
+renderValueBox({
+  valueBox(color = "#EDE6E3",value = cards$total_revenue)})
+```
+
+
+### Average IMDB Rating {.value-box}
+```{r}
+renderValueBox({
+  valueBox(color = "#EDE6E3",value = cards$avg_rating)})
+```
+
+
+### Date Range of Released Movies {.value-box}
+```{r}
+renderValueBox({
+  valueBox(color = "#EDE6E3",value = cards$date_range)})
+```
+
+Row {data-height=400}
+-----------------------------------------------------------------------
+
+### Movie Interactive Database (2000-2025)
+
+```{r}
+create_data_table <- function(data) {
+  # Prepare table data with both nominal and adjusted values
+  table_data <- data %>%
+    select(
+      Title,
+      Released_year,
+      Genre,
+      Rated,
+      Director,
+      BoxOffice_num,
+      BoxOffice_adjusted,
+      Metascore,
+      imdbRating,
+      imdbVotes,
+      Runtime_num
+    ) %>%
+    mutate(
+      # Format nominal box office
+      BoxOffice_Nominal = case_when(
+        is.na(BoxOffice_num) ~ "N/A",
+        BoxOffice_num == 0 ~ "N/A",
+        BoxOffice_num < 1000000 ~ paste0(
+          "$",
+          format(round(BoxOffice_num / 1000), big.mark = ","),
+          "K"
+        ),
+        BoxOffice_num < 1000000000 ~ paste0(
+          "$",
+          format(round(BoxOffice_num / 1000000, 1), big.mark = ","),
+          "M"
+        ),
+        TRUE ~ paste0(
+          "$",
+          format(round(BoxOffice_num / 1000000000, 2), big.mark = ","),
+          "B"
+        )
+      ),
+      # Format adjusted box office
+      BoxOffice_Adj = case_when(
+        is.na(BoxOffice_adjusted) ~ "N/A",
+        BoxOffice_adjusted == 0 ~ "N/A",
+        BoxOffice_adjusted < 1000000 ~ paste0(
+          "$",
+          format(round(BoxOffice_adjusted / 1000), big.mark = ","),
+          "K"
+        ),
+        BoxOffice_adjusted < 1000000000 ~ paste0(
+          "$",
+          format(round(BoxOffice_adjusted / 1000000, 1), big.mark = ","),
+          "M"
+        ),
+        TRUE ~ paste0(
+          "$",
+          format(round(BoxOffice_adjusted / 1000000000, 2), big.mark = ","),
+          "B"
+        )
+      ),
+      # Format rating
+      IMDb_Rating = round(imdbRating, 1),
+      # Format other columns
+      Votes = format(imdbVotes, big.mark = ","),
+      Runtime = paste(Runtime_num, "min")
+    ) %>%
+    select(
+      Title,
+      Released_year,
+      Genre,
+      Rated,
+      Director,
+      BoxOffice_Nominal,
+      BoxOffice_Adj,
+      Metascore,
+      IMDb_Rating,
+      Votes,
+      Runtime
+    )
+
+  # Create data table
+  datatable(
+    table_data, 
+    filter = 'top',
+    rownames = FALSE,
+    options = list(
+      pageLength = 25,
+      searchHighlight = TRUE,
+      paging = TRUE,
+      dom = 'Brtip',
+      buttons = c('copy', 'csv', 'excel'),
+      columnDefs = list(
+        list(className = 'dt-center', targets = c(1, 6, 7, 8, 9)),
+        list(className = 'dt-right', targets = c(4, 5))
+      )
+    ),
+    colnames = c(
+      'Title',
+      'Year',
+      'Genres',
+      'Rated',
+      'Director(s)',
+      'Box Office (Nominal)',
+      'Box Office (2024 adj.)',
+      'Metascore',
+      'IMDb Rating',
+      'Votes',
+      'Runtime'
+    )
+  )
+}
+```
+
+```{r}
+movies_table <- create_data_table(movies_clean)
+movies_table
+```
+
+# Market Analysis
+
+Row {.tabset data-width=500}
+---------------------------------------------------
+
+### Seasonal Movie Performance
+
+```{r}
+create_seasonal_analysis <- function(data) {
+  seasonal_data <- data %>%  # Use the function parameter
+    filter(!is.na(Released)) %>%
+    mutate(
+      release_month = lubridate::month(Released, label = TRUE),
+      month_num = lubridate::month(Released)
+    ) %>%
+    group_by(release_month, month_num) %>%
+    summarise(
+      avg_revenue = mean(BoxOffice_adjusted, na.rm = TRUE) / 1e6,
+      movie_count = n(),
+      avg_rating = mean(imdbRating, na.rm = TRUE),
+      .groups = "drop"
+    ) %>%
+    arrange(month_num) %>%
+    mutate(
+      month_full = month.name[month_num],
+      theta = (month_num - 1) * 30
+    )
+
+  p <- plot_ly(
+    data = seasonal_data,
+    type = "barpolar",
+    r = ~avg_revenue,
+    theta = ~theta,  # Fixed: was ~month
+    marker = list(
+      color = ~avg_rating,
+      colorscale = abb_colors,
+      showscale = TRUE,
+      line = list(color = "white", width = 1),
+      colorbar = list(title = "Average IMDB Rating", 
+                      titleside = "right",
+                      thickness = 15,
+                      len = 0.7,
+                      x = 1.02,
+                      xanchor = "left")
+    ),
+    text = ~paste0(
+      "<b>", month_full, "</b><br>",
+      "Average Revenue: $", round(avg_revenue, 1), "M<br>",
+      "Number of movies: ", movie_count, "<br>",
+      "Average IMDB Rating: ", round(avg_rating, 1)
+    ),
+    hoverinfo = "text"
+  ) %>%
+    layout(
+      title = list(
+        text = "Box Office Revenue ($) by Month of Release",
+        x = 0.5,
+        font = list(size = 16, family = "Cabin",
+        size = 18,
+        color = "#231F20"
+      ) ),
+    font = list(
+      family = "Cabin",
+      color = "#231F20"
+      ),
+      polar = list(
+        radialaxis = list(
+          showline = FALSE,
+          visible = FALSE,
+          tickfont = list(size = 10),
+          showgrid = TRUE
+        ),
+        angularaxis = list(
+          direction = "clockwise",
+          period = 12,
+          tickvals = seasonal_data$theta,
+          ticktext = seasonal_data$release_month
+        )
+      ),
+      showlegend = FALSE,
+      margin = list(l = 50, r = 100, t = 80, b = 50),
+      coloraxis = list(
+        colorbar = list(title = "Avg Rating")
+      )
+    )
+  
+  return(p)  
+}
+
+# Server
+output$seasonal <- renderPlotly({
+  create_seasonal_analysis(movies_clean)
+})
+
+# Output
+plotlyOutput("seasonal")
+```
+
+### Top 20 Movies by Box Office Revenue
+
+```{r}
+# Data
+top_20 <- movies_clean %>%
+  group_by(Year) %>%
+  arrange(desc(BoxOffice_adjusted)) %>%
+  slice_head(n = 20) %>%
+  ungroup()
+
+years <- sort(unique(movies_clean$Year))
+years <- years[-length(years)]
+  
+# UI
+selectInput('Year', '', choices = years , selected = "2024")
+
+# Server
+
+output$top20 <- renderPlotly({
+  data_filtered <- top_20 %>%
+    filter(Year == input$Year)
+  
+  p <- ggplot(
+    data_filtered,
+    aes(x = BoxOffice_adjusted, y = reorder(Title, BoxOffice_adjusted), text = paste(
+        "Box Office Revenue:", "$",BoxOffice_adjusted,
+        "<br>Title:", Title,
+        "<br>Metacritic Score:", Metascore,
+        "<br>IMDB Rating:", imdbRating))
+  ) +
+    geom_segment(aes(xend = 0, yend = Title), color = "#071F20") +  
+    geom_point(aes(color = imdbRating), size = 3) +
+    scale_x_continuous(labels = scales::dollar_format(scale = 1e-6, suffix = "M")) +
+    scale_color_gradientn(colors = gradient_colors)+
+    theme_minimal() +
+    labs(
+      title = paste("Top 20 Movies by Box Office Revenue -", input$Year),
+      x = "Box Office Revenue (Millions)",
+      y = "",
+      color = "IMDB Rating"
+    )+
+    theme(text = element_text(family = "Cabin"))
+  
+  ggplotly(p, height = 500, tooltip = "text") 
+})
+
+# Output 
+plotlyOutput('top20')
+```
+
+
+
+### Box Office Revenue Distribution
+
+```{r}
+create_box_office_distribution <- function(data) {
+  p1 <- data %>%
+    filter(BoxOffice_adjusted > 0) %>%
+    ggplot(aes(x = BoxOffice_adjusted / 1e6, fill = log10(after_stat(x)))) +
+    geom_histogram(bins = 50, alpha = 0.8, 
+                   aes(text = paste0(
+                     "Revenue Range: $", round(after_stat(xmin), 1), "M - $", round(after_stat(xmax), 1), "M",
+                     "<br>Number of Movies: ", after_stat(count)
+                   ))) +
+    scale_fill_gradientn(colours = gradient_colors) +
+    scale_x_log10(
+      breaks = c(0.1, 1, 10, 100, 1000, 10000),
+      labels = c("0.1", "1", "10", "100", "1K", "10K")
+    ) +
+    labs(
+      title = "Box Office Distribution - Inflation Adjusted (2024 dollars)",
+      x = "Box Office Revenue (Million USD)",
+      y = "Number of Movies"
+    ) +
+    theme_minimal() +
+    theme(legend.position = "none",
+          text = element_text(family = "Cabin"))
+
+  plotly::ggplotly(p1, tooltip = "text")
+}
+
+# Output
+log_dist <- create_box_office_distribution(movies_clean)
+log_dist
+```
+
+
+### MPA Film Ratings
+```{r}
+# Data
+rated_movies <- movies_clean %>%
+  filter(!is.na(Rated)) %>% 
+  mutate(
+    # Combine "Unrated" and "Not Rated" into a single category
+    Rated = case_when(
+      Rated %in% c("Unrated", "Not Rated") ~ "Unrated/Not Rated",
+      TRUE ~ Rated
+    )
+  ) %>%
+  group_by(Rated) %>%
+  summarize(
+    number_movies = n(), 
+    average_revenue = mean(BoxOffice_adjusted, na.rm = TRUE),
+    .groups = 'drop'
+  ) %>%
+  arrange(desc(average_revenue))
+
+# Server logic for first plot
+output$rating <- renderPlotly({
+  p1 <- ggplot(
+    rated_movies,
+    aes(x = average_revenue, y = reorder(Rated, average_revenue), 
+        text = paste("MPA Film Rating:", Rated,
+                    "<br>Average Revenue: $", round(average_revenue/1e6, 1), "M"))
+  ) +
+    geom_col(fill = "#246A73") +
+    theme_minimal() +
+    labs(x = "Average Box Office Revenue ($)", y = "MPA Film Rating") +
+    scale_x_reverse(labels = scales::dollar_format(scale = 1e-6, suffix = "M"))  
+                    # reverse x-axis for mirror effect
+  
+# Create second plot (count)
+  p2 <- ggplot(
+    rated_movies, 
+    aes(x = number_movies, y = reorder(Rated, average_revenue), 
+        text = paste("MPA Film Rating:", Rated,
+                    "<br>Number of Movies:", number_movies))
+  ) +
+    geom_col(fill = "#3C2B85") +
+    theme_minimal() +
+    labs(x = "Number of Movies", y = "") +
+    theme(axis.text.y = element_blank())  # Remove y-axis labels from second plot
+  
+  # Convert to plotly and combine
+  plot1 <- ggplotly(p1, tooltip = "text")
+  plot2 <- ggplotly(p2, tooltip = "text")
+  
+  # Use subplot to combine
+  subplot(plot1, plot2, nrows = 1, shareY = TRUE, titleX = TRUE) %>%
+    layout(height = 500)
+})
+
+# Output
+plotlyOutput('rating')
+  
+```
+
+
+# Genre Analysis
+
+Column {.tabset data-width=350}
+-----------------------------------------------------------------------
+### Primary Genre Heatmap {data-height=900}
+
+```{r}
+#Function
+create_genre_treemap <- function(data) {
+  genre_stats <- data %>%
+    group_by(Genre1) %>%
+    summarise(
+      total_revenue = sum(BoxOffice_adjusted, na.rm = TRUE),
+      movie_count = n(),
+      avg_rating = mean(imdbRating, na.rm = TRUE),
+      .groups = "drop"
+    ) %>%
+    filter(movie_count >= 10) %>% 
+    mutate(
+      label = paste0(
+        "Primary Genre: ", Genre1,
+        "<br>Revenue: $", round(total_revenue / 1e9, 1), "B",
+        "<br>Movies: ", movie_count,
+        "<br>IMDB Rating: ", round(avg_rating, 1)
+      ),
+      text_color = ifelse(avg_rating > 6.0, "#EDE6E3", "#231F20")
+    )
+
+  plot_ly(
+    data = genre_stats,
+    type = "treemap",
+    labels = ~Genre1,
+    parents = NA,
+    values = ~total_revenue,
+    customdata = ~label,
+    hovertemplate = "%{customdata}<extra></extra>",
+    textposition = "middle center",
+    marker = list(
+      colors = ~avg_rating,
+      colorscale = abb_colors,
+    line = list(color = "#FFFFFF", width = 1.5),
+    showscale = TRUE
+  ),
+  textfont = list(
+    color = ~text_color,
+    size = 14
+  )
+) %>%
+  layout(
+    title = list(
+      text = "Primary Movie Genres by Total Box Office Revenue",
+      x = 0.5,  # Center the title
+      font = list(
+        family = "Cabin",
+        size = 18,
+        color = "#231F20"
+      )
+    ),
+    font = list(
+      family = "Cabin",
+      color = "#231F20"
+    ),
+    paper_bgcolor = "#FFFFFF",
+    plot_bgcolor  = "#FFFFFF",
+    margin = list(l = 10, r = 10, t = 40, b = 10)
+  )
+}
+
+# Server
+output$treemap <- renderPlotly({
+  create_genre_treemap(movies_clean)
+})
+
+#Output 
+plotlyOutput("treemap", height = "100%")
+```
+
+### Secondary Genre Heatmap 
+
+```{r}
+# Function
+create_second_genre_treemap <- function(data) {
+  genre_stats <- data %>%
+    filter(!is.na(Genre2), Genre2 != "") %>%
+    group_by(Genre2) %>%
+    summarise(
+      total_revenue = sum(BoxOffice_adjusted, na.rm = TRUE),
+      movie_count = n(),
+      avg_rating = mean(imdbRating, na.rm = TRUE),
+      .groups = "drop"
+    ) %>%
+    filter(movie_count >= 10) %>%
+    mutate(
+      label = paste0(
+        "Secondary Genre: ", Genre2,
+        "<br>Revenue: $", round(total_revenue / 1e9, 1), "B",
+        "<br>Movies: ", movie_count,
+        "<br>IMDB Rating: ", round(avg_rating, 1)
+      ),
+      text_color = ifelse(avg_rating > 6.0, "#EDE6E3", "#231F20")
+    )
+
+  plot_ly(
+    data = genre_stats,
+    type = "treemap",
+    labels = ~Genre2,
+    parents = NA,
+    values = ~total_revenue,
+    customdata = ~label,
+    hovertemplate = "%{customdata}<extra></extra>",
+    textposition = "middle center",
+    marker = list(
+      colors = ~avg_rating,
+      colorscale = abb_colors,
+      line = list(color = "#FFFFFF", width = 1.5),
+      showscale = TRUE
+    ),
+    textfont = list(
+      color = ~text_color,
+      size = 14
+    )
+) %>%
+  layout(
+    title = list(
+      text = "Secondary Movie Genres by Total Box Office Revenue",
+      x = 0.5,  # Center the title
+      font = list(
+        family = "Cabin",
+        size = 18,
+        color = "#231F20"
+      )
+    ),
+    font = list(
+      family = "Cabin",
+      color = "#231F20"
+    ),
+    paper_bgcolor = "#FFFFFF",
+    plot_bgcolor  = "#FFFFFF",
+    margin = list(l = 10, r = 10, t = 60, b = 10)  # Increased top margin for title
+  )}
+
+# Server
+output$heatmap <- renderPlotly({
+  create_second_genre_treemap(movies_clean)
+})
+
+#Output
+plotlyOutput("heatmap")
+```
+
+
+### Genre Success Matrix 
+```{r}
+create_genre_combinations <- function(data) {
+  genre_combos <- data %>%
+    filter(str_detect(Genre, ", ")) %>%
+    mutate(
+      genre_count = str_count(Genre, ", ") + 1,
+      primary_genre = str_split(Genre, ", ", simplify = TRUE)[, 1],
+      secondary_genre = str_split(Genre, ", ", simplify = TRUE)[, 2]
+    ) %>%
+    filter(!is.na(secondary_genre), secondary_genre != "") %>%
+    group_by(primary_genre, secondary_genre) %>%
+    summarise(
+      count = n(),
+      avg_revenue = mean(BoxOffice_adjusted, na.rm = TRUE),
+      avg_rating = mean(imdbRating, na.rm = TRUE),
+      .groups = "drop"
+    ) %>%
+    filter(count >= 5) %>%
+    mutate(
+      revenue_millions = avg_revenue / 1e6,
+      hover_text = paste(
+        "<b>Genre Combination</b><br>",
+        "Primary Genre: ", primary_genre, "<br>",
+        "Secondary Genre: ", secondary_genre, "<br>",
+        "Movies: ", count, "<br>",
+        "Revenue: $", round(avg_revenue / 1e6, 1), "M<br>",
+        "IMDB Rating: ", round(avg_rating, 1), "/10"
+      )
+    )
+
+  # Create interactive heatmap with plotly
+  heatmap <- plot_ly(
+    data = genre_combos,
+    x = ~primary_genre,
+    y = ~secondary_genre,
+    z = ~revenue_millions,
+    type = "heatmap",
+    colorscale = teal_246A73_to_purple_gradient,
+    text = ~paste(round(avg_rating, 1)),
+    texttemplate = "%{text}",
+    textfont = list(color = "white", size = 12),
+    hovertemplate = "%{customdata}<extra></extra>",
+    customdata = ~hover_text,
+    colorbar = list(
+      title = list(
+        text = "Average Box Office Revenue<br>(2024 Million $)",
+        font = list(size = 12, family = "Arial")
+      ),
+      titleside = "right"
+    )
+  ) %>%
+  layout(
+    title = list(
+      text = "Genre Combination Performance Heatmap",
+      font = list(size = 16, family = "Cabin", color = "#231F20")
+    ),
+    xaxis = list(
+      title = list(
+        text = "Primary Genre",
+        font = list(size = 12, family = "Cabin", color = "#231F20")
+      ),
+      tickangle = 45,
+      tickfont = list(size = 10)
+    ),
+    yaxis = list(
+      title = list(
+        text = "Secondary Genre",
+        font = list(size = 12, family = "Cabin", color = "#231F20")
+      ),
+      tickfont = list(size = 10)
+    ),
+    font = list(family = "Cabin"),
+    plot_bgcolor = "white",
+    paper_bgcolor = "white",
+    margin = list(l = 80, r = 80, t = 80, b = 100)
+  ) %>%
+  config(
+    displayModeBar = TRUE,
+    modeBarButtonsToRemove = c("pan2d", "select2d", "lasso2d", "autoScale2d"),
+    displaylogo = FALSE,
+    toImageButtonOptions = list(
+      format = "png",
+      filename = "genre_heatmap",
+      height = 600,
+      width = 800,
+      scale = 1
+    )
+  )
+}
+
+# Server
+output$genre_heatmap <- renderPlotly({
+  create_genre_combinations(movies_clean)
+})
+
+# Output
+plotlyOutput("genre_heatmap")
+
+```
+
+
+# Numerical Parameters {data-navmenu="Time Trends"}
+### Trends over time
+```{r}
+# Data
+time <- movies_clean %>%
+  group_by(Year) %>%
+  summarize(
+    count = n(),
+    IMDB = round(mean(imdbRating, na.rm = TRUE), digits = 2),
+    MetaCritic = round(mean(Metascore, na.rm = TRUE), digits = 2),
+    Runtime = round(mean(Runtime_num, na.rm = TRUE), digits = 0),
+    BoxOfficeRevenue = mean(BoxOffice_adjusted, na.rm = TRUE) / 1e6
+  )
+
+options <- c(
+  'IMDB Ratings' = 'IMDB',
+  'MetaCritic Scores' = 'MetaCritic', 
+  'Runtime (min)' = 'Runtime',
+  'Box Office Revenue ($)' = 'BoxOfficeRevenue',
+  'Number of Movies' = 'count'
+)
+
+# UI for first plot
+selectInput('y', '', options, selected = "IMDB")
+
+# Server logic for first plot
+
+output$plot <- renderPlotly({
+  y_label <- names(options)[options == input$y] 
+  p <- ggplot(
+    time,
+    aes(x = Year, y = .data[[input$y]])
+  ) +
+    geom_point(color = "#480F8E", fill = "#480F8E") +
+    geom_line(color = "#246A73") + 
+    theme_minimal()+
+    labs(
+      y = y_label,
+      title = paste0(y_label, " from 2000 to 2025") 
+    )
+  
+  
+  ggplotly(p, height = 500)
+})
+
+# Output for first plot
+plotlyOutput('plot')
+```
+
+# Categorical Paremeters {data-navmenu="Time Trends"}
+### Trends over Time
+```{r}
+# Data 
+group_vars <- c("Primary Genre" = "Genre1", "Secondary Genre" = "Genre2", "Tertiary Genre" = "Genre3", "MPA Film Rating" = "Rated")
+
+# UI 
+selectInput('group', '', choices = group_vars, selected = "Genre1")
+
+# Server Logic
+output$categ <- renderPlotly({
+  
+  categories <- movies_clean %>%
+    filter(!is.na(.data[[input$group]])) %>% 
+    group_by(Year, .data[[input$group]]) %>%
+    summarize(count = n(), .groups = 'drop') %>%
+    group_by(Year) %>% 
+    mutate(percentage = (count / sum(count)) * 100) %>%
+    ungroup()
+  
+  legend_label <- names(group_vars)[group_vars == input$group]
+  
+  p <- ggplot(
+    categories,
+    aes(
+      x = Year,
+      y = percentage,
+      color = .data[[input$group]],
+      group = .data[[input$group]],
+      text = paste(
+        "Year:", Year,
+        "<br>",legend_label, ":", .data[[input$group]],
+        "<br>Percentage:", round(percentage, 1), "%")
+    )
+  ) +
+    geom_point() +
+    geom_line() +
+    scale_x_continuous(breaks = 2000:2025) +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    labs(
+      y = "Percentage (%)",
+      x = "Year",
+      color = legend_label,
+      title = paste0("Percentage of movies by ", legend_label, " from 2000 to 2025") 
+    )
+  
+  ggplotly(p, height = 500, tooltip = "text")
+})
+
+# Output
+plotlyOutput('categ')
+
+# PART 1: FEATURE ENGINEERING
+create_advanced_features <- function(movie_data) {
+  # Calculate director statistics
+  director_stats <- movie_data %>%
+    filter(!is.na(Director), !is.na(BoxOffice_num)) %>%
+    group_by(Director) %>%
+    summarise(
+      director_movies = n(),
+      director_avg_revenue = mean(BoxOffice_num, na.rm = TRUE),
+      director_avg_rating = mean(imdbRating, na.rm = TRUE),
+      director_success_rate = mean(BoxOffice_num > 50000000, na.rm = TRUE),
+      .groups = "drop"
+    )
+  
+  # Calculate actor statistics
+  actor_stats <- movie_data %>%
+    filter(!is.na(Actors), !is.na(BoxOffice_num)) %>%
+    mutate(lead_actor = str_split(Actors, ", ", simplify = TRUE)[,1]) %>%
+    group_by(lead_actor) %>%
+    summarise(
+      actor_movies = n(),
+      actor_avg_revenue = mean(BoxOffice_num, na.rm = TRUE),
+      .groups = "drop"
+    )
+  
+  # Create comprehensive features
+  movie_features <- movie_data %>%
+    filter(!is.na(BoxOffice_num), !is.na(Released_year)) %>%
+    mutate(
+      # Time features
+      years_from_2000 = Released_year - 2000,
+      month = month(Released),
+      quarter = quarter(Released),
+      is_summer = ifelse(!is.na(month), month %in% c(5, 6, 7), FALSE),
+      is_holiday = ifelse(!is.na(month), month %in% c(11, 12), FALSE),
+      
+      # Genre features
+      main_genre = str_split(Genre, ", ", simplify = TRUE)[,1],
+      genre_count = str_count(Genre, ",") + 1,
+      is_action = grepl("Action", Genre),
+      is_comedy = grepl("Comedy", Genre),
+      is_drama = grepl("Drama", Genre),
+      is_horror = grepl("Horror", Genre),
+      is_scifi = grepl("Sci-Fi", Genre),
+      is_animation = grepl("Animation", Genre),
+      
+      # Title features
+      title_length = nchar(Title),
+      is_sequel = grepl("2|3|4|5|II|III|IV|V|Part|Episode|Chapter", Title),
+      has_colon = grepl(":", Title),
+      
+      # Rating features
+      is_r_rated = Rated == "R",
+      is_pg13 = Rated == "PG-13",
+      is_pg = Rated == "PG",
+      
+      # Score and popularity
+      rating_squared = imdbRating^2,
+      log_votes = log(imdbVotes + 1),
+      votes_per_year = imdbVotes / pmax(1, 2024 - Released_year),
+      
+      # Runtime features
+      is_long_movie = Runtime_num > 120,
+      is_short_movie = Runtime_num < 90,
+      runtime_squared = Runtime_num^2,
+      
+      # Awards features
+      has_awards = !is.na(Awards) & Awards != "N/A",
+      award_count = ifelse(has_awards, 
+                          str_count(Awards, "win|Win|won|Won|nomination|Nomination"), 
+                          0),
+      
+      # Era features
+      era = case_when(
+        Released_year <= 2005 ~ "early_2000s",
+        Released_year <= 2010 ~ "late_2000s",
+        Released_year <= 2015 ~ "early_2010s",
+        Released_year <= 2020 ~ "late_2010s",
+        TRUE ~ "early_2020s"
+      ),
+      
+      # Extract lead actor
+      lead_actor = str_split(Actors, ", ", simplify = TRUE)[,1]
+    ) %>%
+    # Join statistics
+    left_join(director_stats, by = "Director") %>%
+    left_join(actor_stats, by = "lead_actor") %>%
+    # Fill missing values
+    mutate(
+      director_movies = replace_na(director_movies, 1),
+      director_avg_revenue = replace_na(director_avg_revenue, median(BoxOffice_num, na.rm = TRUE)),
+      director_avg_rating = replace_na(director_avg_rating, median(imdbRating, na.rm = TRUE)),
+      director_success_rate = replace_na(director_success_rate, 0.5),
+      actor_movies = replace_na(actor_movies, 1),
+      actor_avg_revenue = replace_na(actor_avg_revenue, median(BoxOffice_num, na.rm = TRUE)),
+      month = replace_na(month, 6),
+      quarter = replace_na(quarter, 2),
+      is_summer = replace_na(is_summer, FALSE),
+      is_holiday = replace_na(is_holiday, FALSE)
+    )
+  
+  # Remove infinite values and fill remaining NAs
+  movie_features <- movie_features %>%
+    mutate_if(is.numeric, ~ifelse(is.infinite(.), NA, .)) %>%
+    mutate_if(is.numeric, ~replace_na(., median(., na.rm = TRUE)))
+  
+  return(movie_features)
+}
+
+# PART 2: MODEL BUILDING
+
+
+build_ensemble_model <- function(movie_data) {
+  # Prepare data
+  model_data <- create_advanced_features(movie_data) %>%
+    select(
+      BoxOffice_num, years_from_2000, imdbRating, log_votes, Runtime_num,
+      genre_count, is_sequel, is_summer, is_holiday, 
+      director_avg_revenue, director_avg_rating, actor_avg_revenue,
+      is_action, is_comedy, is_drama, is_horror, is_scifi, is_animation,
+      rating_squared, votes_per_year, is_long_movie, is_short_movie,
+      is_r_rated, is_pg13, is_pg, has_awards, award_count,
+      main_genre, era
+    ) %>%
+    drop_na()
+  
+  # Split data
+  set.seed(123)
+  train_idx <- sample(1:nrow(model_data), 0.8 * nrow(model_data))
+  train_data <- model_data[train_idx, ]
+  test_data <- model_data[-train_idx, ]
+  
+  # Model 1: GAM
+  gam_model <- gam(log(BoxOffice_num) ~ 
+                   s(years_from_2000, k = 5) +
+                   s(imdbRating, k = 5) +
+                   s(log_votes, k = 5) +
+                   s(Runtime_num, k = 5) +
+                   genre_count +
+                   is_sequel +
+                   is_summer +
+                   is_holiday,
+                 data = train_data)
+  
+  # Model 2: Random Forest
+  rf_features <- train_data %>%
+    select_if(is.numeric) %>%
+    select(-BoxOffice_num)
+  
+  rf_features <- rf_features[complete.cases(rf_features), ]
+  rf_target <- log(train_data$BoxOffice_num[complete.cases(rf_features)])
+  
+  rf_model <- randomForest(
+    x = rf_features,
+    y = rf_target,
+    ntree = 100,
+    mtry = sqrt(ncol(rf_features))
+  )
+  
+  # Model 3: Linear Model
+  lm_model <- lm(log(BoxOffice_num) ~ 
+                 years_from_2000 +
+                 imdbRating +
+                 log_votes +
+                 Runtime_num +
+                 director_avg_revenue +
+                 actor_avg_revenue +
+                 is_sequel +
+                 genre_count +
+                 is_summer +
+                 is_holiday,
+               data = train_data)
+  
+  # Model 4: SVM Model
+  svm_features <- rf_features
+  
+  svm_model <- e1071::svm(
+    x      = svm_features,
+    y      = log(train_data$BoxOffice_num),
+    kernel = "radial",
+    cost   = 1,
+    gamma  = 0.1
+  )
+  
+  
+  return(list(
+    gam         = gam_model,
+    rf          = rf_model,
+    lm          = lm_model,
+    svm         = svm_model,      
+    train_data  = train_data,
+    test_data   = test_data,
+    rf_features = rf_features,
+    svm_features = svm_features
+  ))
+}
+```
+
+```{r}
+# PART 3: PREDICTION FUNCTIONS
+
+predict_multiple_years <- function(movie_data, selected_movie, year_range = 2000:2025) {
+
+  # Build models once
+  models <- build_ensemble_model(movie_data)
+  all_features <- create_advanced_features(movie_data)
+  
+  # Get movie info
+  movie_info <- movie_data %>%
+    filter(Title == selected_movie) %>%
+    dplyr::slice(1)
+  
+  if (nrow(movie_info) == 0) {
+    stop(paste("Movie", selected_movie, "not found"))
+  }
+  
+  original_features <- all_features %>%
+    filter(Title == selected_movie) %>%
+    dplyr::slice(1)
+  
+  # Predict for each year
+  predictions <- map_df(year_range, function(target_year) {
+    # Adjust features to target year
+    target_features <- original_features %>%
+      mutate(
+        Released_year = target_year,
+        years_from_2000 = target_year - 2000,
+        era = case_when(
+          target_year <= 2005 ~ "early_2000s",
+          target_year <= 2010 ~ "late_2000s",
+          target_year <= 2015 ~ "early_2010s",
+          target_year <= 2020 ~ "late_2010s",
+          TRUE ~ "early_2020s"
+        ),
+        votes_per_year = imdbVotes / pmax(1, 2024 - target_year)
+      )
+    
+    pred_gam <- exp(predict(models$gam, newdata = target_features))
+    
+    rf_features <- target_features %>%
+      dplyr::select(names(models$rf_features))
+    pred_rf <- exp(predict(models$rf, newdata = rf_features))
+    
+    pred_lm  <- exp(predict(models$lm,  newdata = target_features))
+    pred_svm <- exp(predict(models$svm, newdata = target_features))
+    
+    
+    pred_ensemble <- mean(c(pred_gam, pred_rf, pred_lm, pred_svm))
+    
+    data.frame(
+      Year         = target_year,
+      GAM          = pred_gam / 1e6,
+      RandomForest = pred_rf  / 1e6,
+      Linear       = pred_lm  / 1e6,
+      SVM          = pred_svm / 1e6,        
+      Ensemble     = pred_ensemble / 1e6,
+      Is_Original  = (target_year == movie_info$Released_year)
+    )
+
+  })
+  
+  # Add actual box office
+  predictions$Actual <- ifelse(predictions$Is_Original, 
+                              movie_info$BoxOffice_num / 1e6, 
+                              NA)
+  
+  return(predictions)
+}
+```
+# What If {data-icon="fa-magic" data-orientation=columns}
+
+## Column {data-width=350}
+
+### 🎮 Scenario Controls
+
+```{r}
+# Create scrollable controls panel
+tags$style(HTML("
+  .chart-wrapper {
+    height: 100%;
+    overflow-y: auto;
+    padding-right: 10px;
+  }
+  
+  .chart-wrapper::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  .chart-wrapper::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+  }
+  
+  .chart-wrapper::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 3px;
+  }
+  
+  /* Compact control styling */
+  .form-group {
+    margin-bottom: 10px !important;
+  }
+  
+  .control-label {
+    margin-bottom: 3px !important;
+    font-size: 13px !important;
+  }
+  
+  .shiny-input-container {
+    margin-bottom: 10px !important;
+  }
+  
+  /* Fix selectInput spacing */
+  .selectize-control {
+    margin-bottom: 0 !important;
+  }
+  
+  /* Ensure content flows properly */
+  .scenario-controls-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+"))
+
+# Main container with proper structure
+tags$div(
+  class = "scenario-controls-container",
+  style = "height: 100%; display: flex; flex-direction: column;",
+  
+  # Fixed header section
+  tags$div(
+    style = "flex-shrink: 0; padding: 10px;",
+    
+    # Movie selection
+    selectInput("scenario_movie_select", 
+                "🎬 Select Movie:",
+                choices = sort(unique(movies_clean$Title)),
+                selected = "The Dark Knight"),
+    
+    # Compact movie info
+    uiOutput("movie_info_compact")
+  ),
+  
+  # Scrollable controls section
+  tags$div(
+    class = "chart-wrapper",
+    style = "flex: 1; overflow-y: auto; padding: 0 10px 10px 10px;",
+    
+    # Parameters section
+    tags$div(
+      h6("📊 Adjust Parameters", style = "margin: 10px 0; font-weight: bold;"),
+      
+      # Two-column layout for sliders
+      fluidRow(
+        column(6,
+          sliderInput("scenario_rating_slider", 
+                      "⭐ IMDb",
+                      min = 5, max = 10, value = 8.5, step = 0.1,
+                      width = "100%")
+        ),
+        column(6,
+          sliderInput("scenario_runtime_slider", 
+                      "⏱️ Runtime",
+                      min = 60, max = 240, value = 120, step = 5,
+                      width = "100%", post = "m")
+        )
+      ),
+      # 🔒 Hidden Release Year slider
+tags$div(
+  style = "display: none;",
+  sliderInput("scenario_year_slider",
+              "Release Year (hidden)",
+              min = 2000, max = 2025, value = 2008,
+              width = "100%")
+),
+      fluidRow(
+        column(6,
+          selectInput("scenario_month_select", 
+                      "📅 Month",
+                      choices = setNames(1:12, month.abb),
+                      selected = 6,
+                      width = "100%")
+        ),
+        column(6,
+          radioButtons("scenario_rating_radio", 
+                       "🎭 MPAA",
+                       choices = c("PG", "PG-13", "R"),
+                       selected = "PG-13",
+                       inline = TRUE)
+        )
+      ),
+      
+      # Genres in compact format
+      h6("🎭 Genres", style = "margin: 10px 0 5px 0; font-weight: bold;"),
+      checkboxGroupInput("scenario_genres_check", 
+                         label = NULL,
+                         choices = c("Action", "Comedy", "Drama", "Horror", 
+                                    "Sci-Fi", "Romance", "Thriller", "Animation"),
+                         selected = c("Action", "Drama"),
+                         inline = TRUE),
+      # ML Model selector
+      h6("ML Model", style = "margin: 10px 0 5px 0; font-weight: bold;"),
+      selectInput(
+        "scenario_model_select",
+        label = NULL,
+        choices = c("Ensemble", "GAM", "Random Forest", "Linear Regression", "SVM"),
+        selected = "Ensemble",
+        width = "100%"
+      ),
+      # Run ML Analysis button
+      actionButton("run_scenario_btn", 
+                   "🔮 Run ML Analysis", 
+                   class = "btn-warning btn-block",
+                   style = "width: 100%; margin: 15px 0;")
+    )
+  )
+)
+
+# Function to parse awards text and extract wins
+parse_awards <- function(awards_text) {
+  if(is.na(awards_text) || awards_text == "N/A") {
+    return(list(wins = 0, nominations = 0, has_oscar = FALSE))
+  }
+  
+  # Extract wins
+  wins <- 0
+  win_match <- regmatches(awards_text, regexpr("\\d+\\s+win", awards_text, ignore.case = TRUE))
+  if(length(win_match) > 0) {
+    wins <- as.numeric(gsub("\\D", "", win_match[1]))
+  }
+  
+  # Extract nominations
+  nominations <- 0
+  nom_match <- regmatches(awards_text, regexpr("\\d+\\s+nomination", awards_text, ignore.case = TRUE))
+  if(length(nom_match) > 0) {
+    nominations <- as.numeric(gsub("\\D", "", nom_match[1]))
+  }
+  
+  # Check for Oscar
+  has_oscar <- grepl("Oscar", awards_text, ignore.case = TRUE)
+  
+  return(list(wins = wins, nominations = nominations, has_oscar = has_oscar))
+}
+
+# Compact movie info display
+output$movie_info_compact <- renderUI({
+  req(input$scenario_movie_select)
+  
+  movie <- movies_clean %>%
+    filter(Title == input$scenario_movie_select) %>%
+    head(1)
+  
+  if(nrow(movie) == 0) return(NULL)
+  
+  # Parse awards
+  awards_info <- parse_awards(movie$Awards)
+  
+  # Movie info card
+  tags$div(
+    style = "margin: 0 0 15px 0; background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); 
+            border-radius: 10px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);",
+    
+    # Top section with poster and main info
+    tags$div(
+      style = "display: flex; padding: 12px; gap: 12px;",
+      
+      # Poster with overlay
+      tags$div(
+        style = "position: relative; flex-shrink: 0;",
+        if(!is.na(movie$Poster) && movie$Poster != "N/A") {
+          tagList(
+            tags$img(src = movie$Poster, 
+                     style = "width: 60px; height: 90px; object-fit: cover; 
+                             border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.2);"),
+            # Rating badge
+            tags$div(
+              style = "position: absolute; top: -5px; right: -5px; background: #fbbf24; 
+                      color: #78350f; padding: 2px 6px; border-radius: 12px; 
+                      font-size: 11px; font-weight: bold; box-shadow: 0 1px 3px rgba(0,0,0,0.3);",
+              paste0("★ ", round(movie$imdbRating, 1))
+            )
+          )
+        } else {
+          tags$div(
+            style = "width: 60px; height: 90px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                    border-radius: 6px; display: flex; align-items: center; 
+                    justify-content: center; color: white; font-size: 24px;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.2);",
+            "🎬"
+          )
+        },
+      ),
+      
+      # Movie details
+      tags$div(
+        style = "flex: 1; min-width: 0;",
+        
+        # Title and year
+        tags$div(
+          style = "margin-bottom: 6px;",
+          tags$div(
+            style = "font-size: 14px; font-weight: 600; color: #1a202c; 
+                    line-height: 1.2; margin-bottom: 2px;",
+            movie$Title
+          ),
+          tags$div(
+            style = "font-size: 11px; color: #4a5568;",
+            paste0(movie$Released_year, " • ", movie$Rated, " • ", movie$Runtime_num, " min")
+          )
+        ),
+        
+        # Genre tags
+        tags$div(
+          style = "display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px;",
+          lapply(unlist(strsplit(movie$Genre, ", "))[1:min(3, length(unlist(strsplit(movie$Genre, ", "))))], function(genre) {
+            tags$span(
+              style = "background: rgba(99, 102, 241, 0.1); color: #5b21b6; 
+                      padding: 2px 6px; border-radius: 4px; font-size: 10px;",
+              genre
+            )
+          })
+        ),
+        
+        # Box office and awards
+        tags$div(
+          style = "display: flex; align-items: center; gap: 12px;",
+          tags$div(
+            style = "font-size: 12px; color: #059669; font-weight: 500;",
+            paste0("💰 $", formatC(movie$BoxOffice_num/1e6, format = "f", digits = 1, big.mark = ","), "M")
+          ),
+          # Awards badge if any
+          if(awards_info$wins > 0 || awards_info$has_oscar) {
+            tags$div(
+              style = "font-size: 11px; background: #fef3c7; color: #92400e; 
+                      padding: 2px 6px; border-radius: 4px;",
+              if(awards_info$has_oscar) {
+                paste0("🏆 Oscar Winner")
+              } else {
+                paste0("🏆 ", awards_info$wins, " wins")
+              }
+            )
+          }
+        )
+      )
+    ),
+    
+    # Bottom section with additional metrics
+    tags$div(
+      style = "background: rgba(255,255,255,0.5); padding: 8px 12px; 
+              border-top: 1px solid rgba(0,0,0,0.05);",
+      tags$div(
+        style = "display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center;",
+        
+        # Metascore
+        tags$div(
+          tags$div(style = "font-size: 16px; font-weight: bold; color: #7c3aed;",
+                   ifelse(!is.na(movie$Metascore), movie$Metascore, "—")),
+          tags$div(style = "font-size: 9px; color: #6b7280; margin-top: 2px;", "Metascore")
+        ),
+        
+        # IMDb Votes
+        tags$div(
+          tags$div(style = "font-size: 16px; font-weight: bold; color: #2563eb;",
+                   ifelse(!is.na(movie$imdbVotes), 
+                          paste0(round(movie$imdbVotes/1000), "K"), "—")),
+          tags$div(style = "font-size: 9px; color: #6b7280; margin-top: 2px;", "Votes")
+        ),
+        
+        # Awards count
+        tags$div(
+          tags$div(
+            style = paste0("font-size: 16px; font-weight: bold; color: ",
+                          ifelse(awards_info$has_oscar, "#f59e0b", 
+                                ifelse(awards_info$wins > 0, "#dc2626", "#6b7280")), ";"),
+            if(awards_info$has_oscar) {
+              "🏆"
+            } else if(awards_info$wins > 0) {
+              awards_info$wins
+            } else if(awards_info$nominations > 0) {
+              paste0(awards_info$nominations, "n")
+            } else {
+              "—"
+            }
+          ),
+          tags$div(style = "font-size: 9px; color: #6b7280; margin-top: 2px;", 
+                   if(awards_info$wins > 0) "Wins" else "Awards")
+        )
+      )
+    )
+  )
+})
+```
+
+## Column {data-width=450}
+### ML Model What-If Analysis {data-height="60"}
+
+```{r}
+# Calculate ML predictions based on user's scenario inputs
+scenario_ml_results <- eventReactive(input$run_scenario_btn, {
+  
+  # Get original movie data
+  original_movie <- movies_clean %>%
+    filter(Title == input$scenario_movie_select) %>%
+    head(1)
+  
+  if(nrow(original_movie) == 0) return(NULL)
+  
+  withProgress(message = 'Running ML models...', value = 0, {
+    
+    # Build ensemble ML models
+    incProgress(0.3, detail = "Building models...")
+    models <- build_ensemble_model(movies_clean)
+    all_features <- create_advanced_features(movies_clean)
+    
+    # Get original movie features
+    original_features <- all_features %>%
+      filter(Title == input$scenario_movie_select) %>%
+      head(1)
+    
+    if(nrow(original_features) == 0) return(NULL)
+    
+    # Create modified features based on user inputs
+    incProgress(0.6, detail = "Creating scenarios...")
+    modified_features <- original_features
+    
+    # Update features with user's scenario values
+    modified_features$imdbRating <- input$scenario_rating_slider
+    modified_features$Runtime_num <- input$scenario_runtime_slider
+    modified_features$Released_year <- original_movie$Released_year
+    modified_features$years_from_2000 <- original_movie$Released_year - 2000
+    modified_features$month <- as.numeric(input$scenario_month_select)
+    modified_features$is_summer <- as.numeric(input$scenario_month_select) %in% c(5, 6, 7)
+    modified_features$is_holiday <- as.numeric(input$scenario_month_select) %in% c(11, 12)
+    
+    # Update MPAA rating features
+    modified_features$is_r_rated <- input$scenario_rating_radio == "R"
+    modified_features$is_pg13 <- input$scenario_rating_radio == "PG-13"
+    modified_features$is_pg <- input$scenario_rating_radio == "PG"
+    
+    # Update genre features
+    modified_features$is_action <- "Action" %in% input$scenario_genres_check
+    modified_features$is_comedy <- "Comedy" %in% input$scenario_genres_check
+    modified_features$is_drama <- "Drama" %in% input$scenario_genres_check
+    modified_features$is_horror <- "Horror" %in% input$scenario_genres_check
+    modified_features$is_scifi <- "Sci-Fi" %in% input$scenario_genres_check
+    modified_features$is_animation <- "Animation" %in% input$scenario_genres_check
+    modified_features$genre_count <- length(input$scenario_genres_check)
+    
+    # Update derived features
+    modified_features$rating_squared <- input$scenario_rating_slider^2
+    modified_features$runtime_squared <- input$scenario_runtime_slider^2
+    modified_features$is_long_movie <- input$scenario_runtime_slider > 120
+    modified_features$is_short_movie <- input$scenario_runtime_slider < 90
+    
+    # Make predictions using ensemble models
+    incProgress(0.8, detail = "Making predictions...")
+    
+   
+    pred_gam_orig <- exp(predict(models$gam, newdata = original_features))
+    
+    rf_features_orig <- original_features[, names(models$rf_features), drop = FALSE]
+    pred_rf_orig  <- exp(predict(models$rf,  newdata = rf_features_orig))
+    
+    pred_lm_orig  <- exp(predict(models$lm,  newdata = original_features))
+    
+   
+    pred_gam_mod <- exp(predict(models$gam, newdata = modified_features))
+    
+    rf_features_mod <- modified_features[, names(models$rf_features), drop = FALSE]
+    pred_rf_mod  <- exp(predict(models$rf,  newdata = rf_features_mod))
+    
+    pred_lm_mod  <- exp(predict(models$lm,  newdata = modified_features))
+    
+    
+    
+    model_choice <- input$scenario_model_select
+    
+    if (model_choice == "GAM") {
+      
+      pred_orig_use <- pred_gam_orig
+      pred_mod_use  <- pred_gam_mod
+      
+    } else if (model_choice == "Random Forest") {
+      
+      pred_orig_use <- pred_rf_orig
+      pred_mod_use  <- pred_rf_mod
+      
+    } else if (model_choice == "Linear Regression") {
+      
+      pred_orig_use <- pred_lm_orig
+      pred_mod_use  <- pred_lm_mod
+      
+    } else if (model_choice == "SVM") {
+     
+      
+      svm_vars <- c(
+        "years_from_2000", "imdbRating", "log_votes", "Runtime_num",
+        "director_avg_revenue", "actor_avg_revenue",
+        "is_sequel", "genre_count", "is_summer", "is_holiday"
+      )
+      
+      
+      svm_train_x <- all_features[, svm_vars]
+      svm_train_y <- log(all_features$BoxOffice_num)
+      
+      svm_model <- e1071::svm(
+        x      = svm_train_x,
+        y      = svm_train_y,
+        kernel = "radial",
+        cost   = 1,
+        gamma  = 0.1
+      )
+      
+     
+      svm_orig_x <- original_features[, svm_vars, drop = FALSE]
+      svm_mod_x  <- modified_features[, svm_vars, drop = FALSE]
+      
+      pred_orig_use <- exp(predict(svm_model, newdata = svm_orig_x))
+      pred_mod_use  <- exp(predict(svm_model, newdata = svm_mod_x))
+      
+    } else {  
+      
+      pred_orig_use <- mean(c(pred_gam_orig, pred_rf_orig, pred_lm_orig))
+      pred_mod_use  <- mean(c(pred_gam_mod, pred_rf_mod, pred_lm_mod))
+    }
+    
+    incProgress(1, detail = "Done!")
+
+    
+    # Return results
+    list(
+      movie_title        = original_movie$Title,
+      selected_model     = model_choice,
+      actual_boxoffice   = original_movie$BoxOffice_num / 1e6,
+      predicted_original = pred_orig_use / 1e6,
+      predicted_modified = pred_mod_use / 1e6,
+      change_percent     = (pred_mod_use - pred_orig_use) / pred_orig_use * 100
+    )
+  })
+})
+
+# Create interactive gauge visualization for ML predictions
+renderPlotly({
+  req(scenario_ml_results())
+  results <- scenario_ml_results()
+  print(results)
+  str(results)
+
+  # Create gauge chart
+  fig <- plot_ly(
+    type = "indicator",
+    mode = "gauge+number+delta",
+    value = results$predicted_modified,
+    number = list(suffix = "M", font = list(size = 40)),
+    delta = list(
+      reference = results$predicted_original,
+      increasing = list(color = "#2ca02c"),
+      decreasing = list(color = "#d62728"),
+      suffix = "M",
+      font = list(size = 20)
+    ),
+    gauge = list(
+      axis = list(
+        range = list(0, max(results$actual_boxoffice, results$predicted_original, 
+                           results$predicted_modified) * 1.5),
+        tickwidth = 1,
+        tickcolor = "darkblue"
+      ),
+      bar = list(color = "#ffc107"),
+      bgcolor = "white",
+      borderwidth = 2,
+      bordercolor = "gray",
+      steps = list(
+        list(range = c(0, results$actual_boxoffice), 
+             color = "rgba(31, 119, 180, 0.3)"),
+        list(range = c(results$actual_boxoffice, results$predicted_original), 
+             color = "rgba(44, 160, 44, 0.3)")
+      ),
+      threshold = list(
+        line = list(color = "red", width = 4),
+        thickness = 0.75,
+        value = results$actual_boxoffice
+      )
+    ),
+    domain = list(x = c(0, 1), y = c(0.3, 1))
+  )
+  # Add annotations showing actual and original prediction
+  fig <- fig %>%
+    add_annotations(
+      x = 0.5,
+      y = 0.2,
+      text = paste0(
+        "<b>", results$movie_title, "</b><br>",
+        "Actual: $", round(results$actual_boxoffice, 1), "M | ",
+        "Original Prediction: $", round(results$predicted_original, 1), "M"
+      ),
+      showarrow = FALSE,
+      font = list(size = 14)
+    )
+  
+  # Configure layout
+  fig %>%
+    layout(
+      title = list(
+        text = "ML Box Office Prediction with Your Changes",
+        font = list(size = 18)
+      ),
+      height = 350,
+      margin = list(t = 80, b = 80)
+    )
+})
+```
+
+### Change Summary {data-height="40"}
+
+```{r}
+# Display summary of changes and their impact on box office prediction
+renderUI({
+  req(scenario_ml_results())
+  results <- scenario_ml_results()
+  
+  # Get original movie data for comparison
+  original_movie <- movies_clean %>%
+    filter(Title == input$scenario_movie_select) %>%
+    head(1)
+  
+  # Calculate parameter changes
+  rating_change <- input$scenario_rating_slider - original_movie$imdbRating
+  year_change <- input$scenario_year_slider - original_movie$Released_year
+  runtime_change <- input$scenario_runtime_slider - original_movie$Runtime_num
+  
+  # Create HTML summary display
+  HTML(paste0(
+    '<div style="padding: 20px;">',
+    
+    # Box office comparison cards
+    '<div style="display: flex; gap: 15px; margin-bottom: 20px;">',
+    
+    # Actual box office card
+    '<div style="flex: 1; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); ',
+    'color: white; padding: 15px; border-radius: 8px; text-align: center; ',
+    'box-shadow: 0 4px 6px rgba(0,0,0,0.1);">',
+    '<h6 style="margin: 0; opacity: 0.9; font-size: 14px;">Actual Box Office</h6>',
+    '<h3 style="margin: 8px 0; font-size: 28px;">$', round(results$actual_boxoffice, 1), 'M</h3>',
+    '</div>',
+    
+    # ML original prediction card
+    '<div style="flex: 1; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); ',
+    'color: white; padding: 15px; border-radius: 8px; text-align: center; ',
+    'box-shadow: 0 4px 6px rgba(0,0,0,0.1);">',
+    '<h6 style="margin: 0; opacity: 0.9; font-size: 14px;">ML Original</h6>',
+    '<h3 style="margin: 8px 0; font-size: 28px;">$', round(results$predicted_original, 1), 'M</h3>',
+    '</div>',
+    
+    # User's scenario prediction card
+    '<div style="flex: 1; background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); ',
+    'color: white; padding: 15px; border-radius: 8px; text-align: center; ',
+    'box-shadow: 0 4px 6px rgba(0,0,0,0.1);">',
+    '<h6 style="margin: 0; opacity: 0.9; font-size: 14px;">Your Scenario</h6>',
+    '<h3 style="margin: 8px 0; font-size: 28px;">$', round(results$predicted_modified, 1), 'M</h3>',
+    '<p style="margin: 0; font-size: 16px; font-weight: bold;">',
+    ifelse(results$change_percent > 0, '↑', '↓'),
+    ' ', abs(round(results$change_percent, 1)), '%',
+    '</p>',
+    '</div>',
+    
+    '</div>',
+    
+    # Key changes section
+    '<h5 style="margin-bottom: 15px;">🔄 Key Changes Made</h5>',
+    '<div style="display: flex; gap: 10px; flex-wrap: wrap;">',
+    
+    # IMDb rating change box
+    '<div style="flex: 1; min-width: 120px; background: #f8f9fa; padding: 10px; ',
+    'border-radius: 5px; text-align: center;">',
+    '<small style="color: #6c757d;">IMDb Rating</small><br>',
+    '<strong>', round(original_movie$imdbRating, 1), ' → ', input$scenario_rating_slider, '</strong><br>',
+    '<span style="color: ', ifelse(rating_change > 0, '#2ca02c', '#d62728'), '; font-weight: bold;">',
+    ifelse(rating_change > 0, '+', ''), round(rating_change, 1),
+    '</span>',
+    '</div>',
+    
+    # Runtime change box
+    '<div style="flex: 1; min-width: 120px; background: #f8f9fa; padding: 10px; ',
+    'border-radius: 5px; text-align: center;">',
+    '<small style="color: #6c757d;">Runtime</small><br>',
+    '<strong>', original_movie$Runtime_num, ' → ', input$scenario_runtime_slider, '</strong><br>',
+    '<span style="color: ', ifelse(runtime_change > 0, '#2ca02c', '#d62728'), '; font-weight: bold;">',
+    ifelse(runtime_change > 0, '+', ''), runtime_change, ' min',
+    '</span>',
+    '</div>',
+    
+    # Genre count change box
+    '<div style="flex: 1; min-width: 120px; background: #f8f9fa; padding: 10px; ',
+    'border-radius: 5px; text-align: center;">',
+    '<small style="color: #6c757d;">Genres</small><br>',
+    '<strong>', length(strsplit(original_movie$Genre, ", ")[[1]]), ' → ', 
+    length(input$scenario_genres_check), '</strong><br>',
+    '<span style="color: #1f77b4; font-weight: bold;">',
+    length(input$scenario_genres_check), ' selected',
+    '</span>',
+    '</div>',
+    
+    '</div>',
+    '</div>'
+  ))
+})
+
+
+```
+
+## Column {data-width=350}
+### 🧪 AI Recipe Generator
+
+```{r}
+# HELPER FUNCTIONS
+
+# Null coalescing operator
+`%||%` <- function(x, y) {
+  if (is.null(x) || length(x) == 0 || all(is.na(x))) y else x
+}
+
+# Safe sampling function with NA handling
+safe_sample <- function(x, size = 1, prob = NULL) {
+  # Remove NA values
+  x <- x[!is.na(x)]
+  
+  if(length(x) == 0) return(NULL)
+  if(length(x) == 1) return(x)
+  
+  size <- min(size, length(x))
+  
+  if(!is.null(prob) && length(prob) == length(x)) {
+    # Remove NA probabilities
+    valid_idx <- !is.na(prob)
+    x <- x[valid_idx]
+    prob <- prob[valid_idx]
+    
+    if(length(x) == 0) return(NULL)
+    if(sum(prob) > 0) {
+      prob <- prob / sum(prob)
+      return(sample(x, size, prob = prob))
+    }
+  }
+  
+  return(sample(x, size))
+}
+
+
+# Clean generated text
+clean_generated_text <- function(text) {
+  if(is.null(text) || is.na(text)) return("")
+  
+  text <- gsub("\\s+", " ", text)
+  text <- gsub("\\s+([.,!?])", "\\1", text)
+  text <- gsub("([.,!?])([A-Z])", "\\1 \\2", text)
+  text <- gsub("\\.+", ".", text)
+  text <- gsub("^(.)", "\\U\\1", text, perl = TRUE)
+  text <- gsub("([.!?]\\s+)([a-z])", "\\1\\U\\2", text, perl = TRUE)
+  
+  return(trimws(text))
+}
+
+# UI INTERFACE
+
+tags$div(
+  style = "height: 100%; overflow-y: auto; padding: 15px;",
+  
+  h5("🎯 Investment Parameters", style = "margin-top: 0;"),
+  
+  sliderInput("target_boxoffice", 
+              "💰 Target Box Office Revenue:",
+              min = 50, max = 1000, value = 300, step = 25,
+              width = "100%",
+              post = " Million USD"),
+  
+  radioButtons("optimization_type", 
+               "📊 Optimization Strategy:",
+               choices = list(
+                 "Maximize Revenue 💰" = "boxoffice",
+                 "Maximize Rating ⭐" = "rating",
+                 "Balanced Approach ⚖️" = "balanced"
+               ),
+               selected = "balanced",
+               inline = TRUE),
+  
+  hr(),
+  
+  h5("🤖 AI Model Configuration", style = "margin-top: 15px;"),
+  
+  radioButtons("ai_model_type", 
+               "Select AI Model:",
+               choices = list(
+                 "Transformer-based (GPT-style)" = "transformer",
+                 "LSTM Sequential" = "lstm",
+                 "Ensemble Learning" = "ensemble",
+                 "Markov Chain Monte Carlo" = "mcmc"
+               ),
+               selected = "transformer"),
+  
+  tags$div(
+  style = "margin-bottom: 20px;",
+  
+  tags$label("🌡️ Generation Temperature:", 
+             style = "display: block; margin-bottom: 15px; font-weight: 500;"),
+  
+  tags$div(
+    style = "position: relative; padding: 20px 0 10px 0;",
+    tags$div(
+      style = "position: absolute; top: 0; left: 12px; right: 12px; height: 8px;
+              background: linear-gradient(to right, #3b82f6 0%, #ef4444 100%);
+              border-radius: 4px; opacity: 0.2;"
+    ),
+    tags$div(
+      style = "display: flex; justify-content: space-between; margin-bottom: 5px; padding: 0 12px;",
+      tags$span("🧊 Conservative", style = "color: #3b82f6; font-size: 13px; font-weight: 500;"),
+      tags$span("🔥 Creative", style = "color: #ef4444; font-size: 13px; font-weight: 500;")
+    ),
+    sliderInput("generation_temperature", 
+                label = NULL,
+                min = 0.1, max = 2.0, value = 0.8, step = 0.1,
+                width = "100%")
+  )
+),
+  
+  selectInput("sampling_method", 
+              "Sampling Strategy:",
+              choices = list(
+                "Top-K Sampling" = "topk",
+                "Nucleus (Top-P)" = "nucleus",
+                "Beam Search" = "beam",
+                "Greedy" = "greedy"
+              ),
+              selected = "nucleus"),
+  
+  hr(),
+  
+  h5("🎬 Content Parameters", style = "margin-top: 15px;"),
+  
+  selectInput("primary_genre", 
+              "Primary Genre:",
+              choices = list(
+                "Action/Adventure" = "action",
+                "Drama" = "drama",
+                "Comedy" = "comedy",
+                "Thriller" = "thriller",
+                "Sci-Fi" = "scifi",
+                "Horror" = "horror"
+              ),
+              selected = "action"),
+  
+  sliderInput("originality_score", 
+              "💡 Originality Level:",
+              min = 1, max = 10, value = 7,
+              pre = "Familiar ", post = " Innovative"),
+  
+  actionButton("generate_ai_movie", 
+               "🚀 Generate with AI", 
+               class = "btn-primary btn-block",
+               style = "width: 100%; margin: 20px 0; font-size: 16px; padding: 12px;"),
+  
+  uiOutput("ai_movie_result")
+)
+
+# MAIN GENERATION LOGIC
+
+observeEvent(input$generate_ai_movie, {
+  
+  withProgress(message = 'Initializing AI models...', value = 0, {
+    
+    tryCatch({
+      
+      # Step 1: Validate inputs
+      incProgress(0.1, detail = "Validating inputs...")
+      
+      genre_input <- input$primary_genre %||% "action"
+      target_boxoffice <- as.numeric(input$target_boxoffice) * 1e6
+      optimization_type <- input$optimization_type
+      ai_model_type <- input$ai_model_type
+      temperature <- as.numeric(input$generation_temperature)
+      sampling_method <- input$sampling_method
+      originality <- as.numeric(input$originality_score)
+      
+      # Step 2: Prepare data
+      incProgress(0.2, detail = "Preparing movie data...")
+      
+      genre_filter <- switch(genre_input,
+        "action" = "Action",
+        "drama" = "Drama",
+        "comedy" = "Comedy",
+        "thriller" = "Thriller",
+        "scifi" = "Sci-Fi",
+        "horror" = "Horror",
+        "Action"
+      )
+      
+      relevant_movies <- movies_clean %>%
+        filter(
+          !is.na(Title),
+          !is.na(Plot),
+          nchar(Plot) > 50,
+          !is.na(BoxOffice_num),
+          !is.na(imdbRating)
+        ) %>%
+        filter(
+          grepl(genre_filter, Genre, ignore.case = TRUE) | row_number() <= 100
+        ) %>%
+        mutate(
+          success_score = case_when(
+            optimization_type == "boxoffice" ~ scale(BoxOffice_num)[,1],
+            optimization_type == "rating" ~ scale(imdbRating)[,1],
+            TRUE ~ (scale(BoxOffice_num)[,1] + scale(imdbRating)[,1]) / 2
+          )
+        ) %>%
+        arrange(desc(success_score)) %>%
+        head(50)
+      
+      if(nrow(relevant_movies) < 10) {
+        stop("Insufficient data for selected genre")
+      }
+      
+      # Step 3: Initialize AI model
+      incProgress(0.3, detail = "Initializing AI model...")
+      
+      ai_model <- list(
+        type = ai_model_type,
+        temperature = temperature,
+        sampling = sampling_method,
+        patterns = extract_patterns_optimized(relevant_movies)
+      )
+      
+      # Step 4: Generate title
+      incProgress(0.4, detail = "Generating title...")
+      
+      generated_title <- generate_title_with_ai(
+        movies = relevant_movies,
+        model = ai_model,
+        originality = originality
+      )
+      
+      # Step 5: Generate plot
+      incProgress(0.5, detail = "Creating plot...")
+      
+      generated_plot <- generate_plot_with_ai(
+        movies = relevant_movies,
+        model = ai_model,
+        genre = genre_filter,
+        title = generated_title
+      )
+      
+      # Step 6: Select team
+      incProgress(0.6, detail = "Selecting optimal team...")
+      
+      team <- select_team_with_ml(
+        movies = relevant_movies,
+        optimization = optimization_type
+      )
+      
+      # Step 7: Determine configuration
+      incProgress(0.7, detail = "Optimizing configuration...")
+      
+      config <- optimize_movie_config(
+        movies = relevant_movies,
+        target_boxoffice = target_boxoffice,
+        optimization = optimization_type
+      )
+      
+      # Step 8: Create movie object (NO BUDGET)
+      generated_movie <- list(
+        title = generated_title,
+        plot = generated_plot,
+        director = team$director,
+        cast = team$cast,
+        genres = config$genres,
+        runtime = config$runtime,
+        release_month = config$release_month,
+        mpaa_rating = config$mpaa_rating,
+        ai_model = ai_model_type,
+        optimization = optimization_type
+      )
+      
+      # Step 9: Predict performance
+      incProgress(0.8, detail = "Predicting performance...")
+      
+      performance <- predict_performance_ml(
+        movie = generated_movie,
+        reference_movies = relevant_movies,
+        optimization = optimization_type
+      )
+      
+      # Step 10: Display results
+      incProgress(0.9, detail = "Preparing visualization...")
+      
+      output$ai_movie_result <- renderUI({
+        create_enhanced_result_ui(
+          movie = generated_movie,
+          performance = performance,
+          model_info = ai_model
+        )
+      })
+      
+      incProgress(1, detail = "Complete!")
+      showNotification("🎬 AI Movie Generated Successfully!", type = "message")
+      
+    }, error = function(e) {
+      showNotification(
+        paste("Generation failed:", e$message),
+        type = "error",
+        duration = 5
+      )
+      
+      output$ai_movie_result <- renderUI({
+        tags$div(
+          style = "padding: 20px; background: #fff5f5; border: 1px solid #feb2b2; border-radius: 8px; margin-top: 20px;",
+          tags$h5("⚠️ Generation Error", style = "color: #c53030;"),
+          tags$p("Unable to generate movie with current settings."),
+          tags$small(
+            style = "color: #718096;",
+            "Error: ", tags$code(e$message)
+          ),
+          tags$hr(),
+          tags$p("Try adjusting your parameters or selecting a different genre.")
+        )
+      })
+    })
+  })
+})
+
+# PATTERN EXTRACTION
+
+extract_patterns_optimized <- function(movies) {
+  patterns <- list()
+  
+  # Extract titles (remove NAs)
+  patterns$titles <- movies$Title[!is.na(movies$Title) & movies$Title != ""]
+  
+  if(length(patterns$titles) == 0) {
+    patterns$titles <- c("The Movie")
+  }
+  
+  # Title word frequency
+  title_words <- unlist(strsplit(patterns$titles, "\\s+"))
+  title_words <- title_words[!is.na(title_words) & title_words != ""]
+  
+  if(length(title_words) > 0) {
+    patterns$title_freq <- sort(table(title_words), decreasing = TRUE)
+  } else {
+    patterns$title_freq <- table(c("The", "Movie"))
+  }
+  
+  # Plot patterns
+  valid_plots <- movies$Plot[!is.na(movies$Plot) & nchar(movies$Plot) > 50]
+  
+  if(length(valid_plots) > 0) {
+    patterns$openings <- unique(substr(valid_plots, 1, 100))
+    patterns$openings <- patterns$openings[!is.na(patterns$openings)]
+    patterns$openings <- patterns$openings[1:min(10, length(patterns$openings))]
+  } else {
+    patterns$openings <- c("In a world where anything is possible")
+  }
+  
+  # Extract conflicts safely
+  patterns$conflicts <- tryCatch({
+    if(length(valid_plots) > 0) {
+      conflicts <- unlist(str_extract_all(valid_plots, "(must|has to|needs to|forced to) [^.]+"))
+      conflicts <- conflicts[!is.na(conflicts) & conflicts != ""]
+      unique(conflicts)[1:min(10, length(conflicts))]
+    } else {
+      character(0)
+    }
+  }, error = function(e) character(0))
+  
+  # Director patterns
+  if("Director" %in% names(movies)) {
+    valid_directors <- movies$Director[!is.na(movies$Director) & movies$Director != ""]
+    if(length(valid_directors) > 0) {
+      patterns$directors <- names(sort(table(valid_directors), decreasing = TRUE))[1:min(10, length(unique(valid_directors)))]
+    } else {
+      patterns$directors <- c("Unknown Director")
+    }
+  } else {
+    patterns$directors <- c("Unknown Director")
+  }
+  
+  return(patterns)
+}
+
+safe_str_extract <- function(string, pattern) {
+  if(is.null(string) || all(is.na(string)) || length(string) == 0) {
+    return(character(0))
+  }
+  
+  # Remove NA strings
+  string <- string[!is.na(string) & string != ""]
+  
+  if(length(string) == 0) {
+    return(character(0))
+  }
+  
+  result <- tryCatch({
+    extracted <- str_extract_all(string, pattern)
+    unlist(extracted)
+  }, error = function(e) character(0))
+  
+  # Remove NAs from result
+  result <- result[!is.na(result) & result != ""]
+  
+  return(result %||% character(0))
+}
+
+# TITLE GENERATION
+
+generate_title_with_ai <- function(movies, model, originality) {
+  titles <- model$patterns$titles
+  title_freq <- model$patterns$title_freq
+  
+  if(length(titles) == 0) {
+    return("The Untitled Story")
+  }
+  
+  title <- switch(model$type,
+    "transformer" = generate_transformer_title(titles, title_freq, model$temperature, originality),
+    "lstm" = generate_lstm_title(titles, title_freq, model$temperature, originality),
+    "mcmc" = generate_mcmc_title(titles, title_freq, model$temperature, originality),
+    generate_ensemble_title(titles, title_freq, originality)
+  )
+  
+  return(clean_generated_text(title))
+}
+
+generate_transformer_title <- function(titles, word_freq, temperature, originality) {
+  bigrams <- list()
+  
+  for(title in titles) {
+    words <- strsplit(title, "\\s+")[[1]]
+    if(length(words) >= 2) {
+      for(i in 1:(length(words)-1)) {
+        key <- words[i]
+        if(!key %in% names(bigrams)) bigrams[[key]] <- list()
+        bigrams[[key]][[words[i+1]]] <- (bigrams[[key]][[words[i+1]]] %||% 0) + 1
+      }
+    }
+  }
+  
+  start_words <- intersect(c("The", "A", "Dark", "Last", "Final"), names(word_freq))
+  if(length(start_words) == 0) start_words <- names(word_freq)[1:min(5, length(word_freq))]
+  
+  current_word <- safe_sample(start_words, 1)
+  title_words <- c(current_word)
+  
+  for(i in 2:sample(2:4, 1)) {
+    if(current_word %in% names(bigrams) && length(bigrams[[current_word]]) > 0) {
+      next_probs <- unlist(bigrams[[current_word]])
+      
+      if(temperature != 1.0) {
+        next_probs <- next_probs^(1/temperature)
+      }
+      
+      if(length(next_probs) > 0) {
+        next_probs <- next_probs / sum(next_probs)
+        current_word <- safe_sample(names(next_probs), 1, prob = next_probs)
+        if(!is.null(current_word)) {
+          title_words <- c(title_words, current_word)
+        } else {
+          break
+        }
+      } else {
+        break
+      }
+    } else {
+      break
+    }
+  }
+  
+  return(paste(title_words, collapse = " "))
+}
+
+generate_lstm_title <- function(titles, word_freq, temperature, originality) {
+  # Ensure we have valid input
+  if(length(titles) == 0 || length(word_freq) == 0) {
+    return("The Story")
+  }
+  
+  sequence_length <- sample(2:4, 1)
+  title_words <- character(sequence_length)
+  
+  # Get available words and remove NAs
+  available_words <- names(word_freq)
+  available_words <- available_words[!is.na(available_words)]
+  available_words <- available_words[1:min(10, length(available_words))]
+  
+  if(length(available_words) == 0) {
+    return("The Story")
+  }
+  
+  # Initialize first word
+  title_words[1] <- safe_sample(available_words, 1)
+  
+  if(is.null(title_words[1])) {
+    title_words[1] <- "The"
+  }
+  
+  for(i in 2:sequence_length) {
+    # Get context words (remove NAs)
+    context_start <- max(1, i-2)
+    context_end <- i-1
+    context <- title_words[context_start:context_end]
+    context <- context[!is.na(context) & context != ""]
+    
+    similar_words <- character()
+    
+    # Find similar contexts in training data
+    for(title in titles) {
+      if(is.na(title) || title == "") next
+      
+      words <- strsplit(title, "\\s+")[[1]]
+      words <- words[!is.na(words) & words != ""]
+      
+      if(length(words) < 2) next
+      
+      for(j in 1:(length(words)-1)) {
+        if(j <= length(words) && !is.na(words[j]) && words[j] %in% context) {
+          if((j+1) <= length(words) && !is.na(words[j+1])) {
+            similar_words <- c(similar_words, words[j+1])
+          }
+        }
+      }
+    }
+    
+    # Remove NAs and empty strings
+    similar_words <- similar_words[!is.na(similar_words) & similar_words != ""]
+    
+    if(length(similar_words) > 0) {
+      title_words[i] <- safe_sample(similar_words, 1)
+    } else {
+      # Fallback to frequency-based selection
+      fallback_words <- names(word_freq)
+      fallback_words <- fallback_words[!is.na(fallback_words)]
+      fallback_words <- fallback_words[1:min(20, length(fallback_words))]
+      
+      if(length(fallback_words) > 0) {
+        title_words[i] <- safe_sample(fallback_words, 1)
+      } else {
+        title_words[i] <- "Story"
+      }
+    }
+    
+    # Final safety check
+    if(is.null(title_words[i]) || is.na(title_words[i])) {
+      title_words[i] <- "Story"
+    }
+  }
+  
+  # Clean up and return
+  title_words <- title_words[!is.na(title_words) & title_words != ""]
+  
+  if(length(title_words) == 0) {
+    return("The Story")
+  }
+  
+  return(paste(title_words, collapse = " "))
+}
+
+generate_mcmc_title <- function(titles, word_freq, temperature, originality) {
+  current_title <- safe_sample(titles, 1)
+  best_title <- current_title
+  best_score <- score_title(current_title, titles, originality)
+  
+  for(iter in 1:100) {
+    words <- strsplit(current_title, "\\s+")[[1]]
+    
+    if(runif(1) < 0.5 && length(words) > 1) {
+      idx <- sample(1:length(words), 1)
+      available_words <- names(word_freq)[1:min(30, length(word_freq))]
+      words[idx] <- safe_sample(available_words, 1)
+    } else if(length(words) < 5) {
+      available_words <- names(word_freq)[1:min(30, length(word_freq))]
+      new_word <- safe_sample(available_words, 1)
+      words <- append(words, new_word, after = sample(0:length(words), 1))
+    }
+    
+    proposed_title <- paste(words, collapse = " ")
+    proposed_score <- score_title(proposed_title, titles, originality)
+    
+    if(proposed_score > best_score || 
+       runif(1) < exp((proposed_score - best_score) / temperature)) {
+      current_title <- proposed_title
+      if(proposed_score > best_score) {
+        best_title <- proposed_title
+        best_score <- proposed_score
+      }
+    }
+  }
+  
+  return(best_title)
+}
+
+generate_ensemble_title <- function(titles, word_freq, originality) {
+  if(originality < 5) {
+    base <- safe_sample(titles[1:min(10, length(titles))], 1)
+    words <- strsplit(base, "\\s+")[[1]]
+    if(length(words) > 1) {
+      available_words <- names(word_freq)[5:min(20, length(word_freq))]
+      words[sample(2:length(words), 1)] <- safe_sample(available_words, 1)
+    }
+    return(paste(words, collapse = " "))
+  } else {
+    num_words <- sample(2:4, 1)
+    available_words <- names(word_freq)[1:min(30, length(word_freq))]
+    selected_words <- safe_sample(available_words, num_words)
+    return(paste(selected_words, collapse = " "))
+  }
+}
+
+score_title <- function(title, reference_titles, originality) {
+  score <- 0
+  
+  words <- strsplit(title, "\\s+")[[1]]
+  if(length(words) >= 2 && length(words) <= 4) score <- score + 1
+  
+  if(!(title %in% reference_titles)) score <- score + originality/10
+  
+  if(length(words) >= 2) {
+    for(i in 1:(length(words)-1)) {
+      bigram <- paste(words[i], words[i+1])
+      if(any(grepl(bigram, reference_titles))) score <- score + 0.5
+    }
+  }
+  
+  return(score)
+}
+
+# PLOT GENERATION
+
+generate_plot_with_ai <- function(movies, model, genre, title) {
+  plots <- movies$Plot[!is.na(movies$Plot) & nchar(movies$Plot) > 50]
+  
+  if(length(plots) < 5) {
+    return(paste("In this", tolower(genre), "adventure,", title, 
+                 "explores themes of courage and determination."))
+  }
+  
+  elements <- extract_plot_elements(plots)
+  
+  plot <- switch(model$type,
+    "transformer" = generate_transformer_plot(elements, model$temperature),
+    "lstm" = generate_lstm_plot(elements, model$temperature),
+    generate_ensemble_plot(elements)
+  )
+  
+  return(clean_generated_text(plot))
+}
+
+extract_plot_elements <- function(plots) {
+  elements <- list()
+  
+  # Remove NA plots
+  plots <- plots[!is.na(plots) & plots != ""]
+  
+  if(length(plots) == 0) {
+    return(list(
+      openings = c("In a world of endless possibilities"),
+      conflicts = c("faces an impossible challenge"),
+      resolutions = c("A journey that will change everything."),
+      characters = c("brave hero")
+    ))
+  }
+  
+  # Extract openings
+  elements$openings <- unique(substr(plots, 1, 100))
+  elements$openings <- elements$openings[!is.na(elements$openings) & elements$openings != ""]
+  elements$openings <- elements$openings[1:min(10, length(elements$openings))]
+  
+  # Extract conflicts using safe_str_extract
+  elements$conflicts <- safe_str_extract(plots, "(must|has to|needs to|discovers) [^.]+")
+  if(length(elements$conflicts) > 0) {
+    elements$conflicts <- unique(elements$conflicts)[1:min(10, length(elements$conflicts))]
+  }
+  
+  # Extract resolutions using safe_str_extract
+  elements$resolutions <- safe_str_extract(plots, "[A-Z][^.]+\\.$")
+  if(length(elements$resolutions) > 0) {
+    elements$resolutions <- unique(elements$resolutions)[1:min(10, length(elements$resolutions))]
+  }
+  
+  # Extract characters using safe_str_extract
+  elements$characters <- safe_str_extract(plots, "(young|old|brilliant|mysterious|unlikely) [a-z]+")
+  if(length(elements$characters) > 0) {
+    elements$characters <- unique(elements$characters)[1:min(10, length(elements$characters))]
+  }
+  
+  # Ensure all elements have at least one item
+  if(length(elements$openings) == 0) elements$openings <- c("In a world of endless possibilities")
+  if(length(elements$conflicts) == 0) elements$conflicts <- c("faces an impossible challenge")
+  if(length(elements$resolutions) == 0) elements$resolutions <- c("A journey that will change everything.")
+  if(length(elements$characters) == 0) elements$characters <- c("brave hero")
+  
+  return(elements)
+}
+
+generate_transformer_plot <- function(elements, temperature) {
+  opening <- safe_sample(elements$openings, 1) %||% "In a world where anything is possible,"
+  conflict <- safe_sample(elements$conflicts, 1) %||% "our hero faces an impossible challenge"
+  
+  if(temperature > 1.0 && length(elements$characters) > 0) {
+    character <- safe_sample(elements$characters, 1)
+    if(!is.null(character)) {
+      conflict <- paste("The", character, conflict)
+    }
+  }
+  
+  resolution <- safe_sample(elements$resolutions, 1) %||% "A journey that will change everything."
+  
+  plot <- paste(opening, conflict, ".", resolution)
+  plot <- gsub("\\s+", " ", plot)
+  plot <- gsub("\\.\\.+", ".", plot)
+  
+  return(plot)
+}
+
+generate_lstm_plot <- function(elements, temperature) {
+  plot_parts <- character(3)
+  
+  # Part 1: Opening
+  if(!is.null(elements$openings) && length(elements$openings) > 0) {
+    valid_openings <- elements$openings[!is.na(elements$openings) & elements$openings != ""]
+    if(length(valid_openings) > 0) {
+      plot_parts[1] <- safe_sample(valid_openings, 1)
+    }
+  }
+  
+  if(is.null(plot_parts[1]) || is.na(plot_parts[1]) || plot_parts[1] == "") {
+    plot_parts[1] <- "In a world of endless possibilities,"
+  }
+  
+  # Part 2: Conflict
+  if(!is.null(elements$conflicts) && length(elements$conflicts) > 0) {
+    valid_conflicts <- elements$conflicts[!is.na(elements$conflicts) & elements$conflicts != ""]
+    if(length(valid_conflicts) > 0) {
+      conflict <- safe_sample(valid_conflicts, 1)
+      if(!is.null(conflict) && !is.na(conflict)) {
+        plot_parts[2] <- paste("our protagonist", conflict)
+      }
+    }
+  }
+  
+  if(is.null(plot_parts[2]) || is.na(plot_parts[2]) || plot_parts[2] == "") {
+    plot_parts[2] <- "our hero faces unprecedented challenges"
+  }
+  
+  # Part 3: Resolution
+  if(!is.null(elements$resolutions) && length(elements$resolutions) > 0) {
+    valid_resolutions <- elements$resolutions[!is.na(elements$resolutions) & elements$resolutions != ""]
+    if(length(valid_resolutions) > 0) {
+      plot_parts[3] <- safe_sample(valid_resolutions, 1)
+    }
+  }
+  
+  if(is.null(plot_parts[3]) || is.na(plot_parts[3]) || plot_parts[3] == "") {
+    plot_parts[3] <- "A journey that will change everything."
+  }
+  
+  # Final safety check
+  plot_parts <- plot_parts[!is.na(plot_parts) & plot_parts != ""]
+  
+  if(length(plot_parts) == 0) {
+    return("An extraordinary adventure unfolds.")
+  }
+  
+  return(paste(plot_parts, collapse = " "))
+}
+
+
+generate_ensemble_plot <- function(elements) {
+  opening <- safe_sample(elements$openings, 1) %||% "An extraordinary story begins"
+  conflict <- safe_sample(elements$conflicts, 1) %||% "when fate intervenes"
+  resolution <- safe_sample(elements$resolutions, 1) %||% "leading to an unforgettable conclusion."
+  
+  plot <- paste(opening, conflict, resolution)
+  plot <- gsub("\\s+", " ", plot)
+  plot <- gsub("([.!?])\\1+", "\\1", plot)
+  
+  return(plot)
+}
+
+# TEAM SELECTION
+
+select_team_with_ml <- function(movies, optimization) {
+  team <- list(director = "Acclaimed Director", cast = "Star Ensemble")
+  
+  if("Director" %in% names(movies)) {
+    director_stats <- movies %>%
+      filter(!is.na(Director)) %>%
+      group_by(Director) %>%
+      summarise(
+        count = n(),
+        avg_revenue = mean(BoxOffice_num, na.rm = TRUE),
+        avg_rating = mean(imdbRating, na.rm = TRUE),
+        .groups = 'drop'
+      ) %>%
+      filter(count >= 1)
+    
+    if(nrow(director_stats) > 0) {
+      if(optimization == "boxoffice") {
+        team$director <- director_stats %>%
+          arrange(desc(avg_revenue)) %>%
+          slice(1) %>%
+          pull(Director)
+      } else if(optimization == "rating") {
+        team$director <- director_stats %>%
+          arrange(desc(avg_rating)) %>%
+          slice(1) %>%
+          pull(Director)
+      } else {
+        team$director <- director_stats %>%
+          mutate(score = scale(avg_revenue)[,1] + scale(avg_rating)[,1]) %>%
+          arrange(desc(score)) %>%
+          slice(1) %>%
+          pull(Director)
+      }
+    }
+  }
+  
+  if("Actors" %in% names(movies)) {
+    all_actors <- movies$Actors %>%
+      na.omit() %>%
+      str_split(", ") %>%
+      unlist()
+    
+    if(length(all_actors) >= 3) {
+      actor_freq <- sort(table(all_actors), decreasing = TRUE)
+      top_actors <- names(actor_freq)[1:min(3, length(actor_freq))]
+      team$cast <- paste(top_actors, collapse = ", ")
+    }
+  }
+  
+  return(team)
+}
+
+# CONFIGURATION OPTIMIZATION 
+
+optimize_movie_config <- function(movies, target_boxoffice, optimization) {
+  config <- list()
+  
+  successful_movies <- movies %>%
+    filter(!is.na(BoxOffice_num), !is.na(imdbRating))
+  
+  if(nrow(successful_movies) > 0) {
+    config$runtime <- round(median(successful_movies$Runtime_num, na.rm = TRUE))
+    
+    genre_performance <- successful_movies %>%
+      group_by(Genre) %>%
+      summarise(
+        count = n(),
+        avg_revenue = mean(BoxOffice_num, na.rm = TRUE),
+        avg_rating = mean(imdbRating, na.rm = TRUE),
+        .groups = 'drop'
+      ) %>%
+      filter(count >= 2)
+    
+    if(nrow(genre_performance) > 0) {
+      if(optimization == "boxoffice") {
+        config$genres <- genre_performance %>%
+          arrange(desc(avg_revenue)) %>%
+          slice(1) %>%
+          pull(Genre)
+      } else {
+        config$genres <- genre_performance %>%
+          arrange(desc(avg_rating)) %>%
+          slice(1) %>%
+          pull(Genre)
+      }
+    } else {
+      config$genres <- successful_movies$Genre[1]
+    }
+    
+    if("Released" %in% names(successful_movies)) {
+      release_months <- month(successful_movies$Released, label = FALSE)
+      release_months <- release_months[!is.na(release_months)]
+      if(length(release_months) > 0) {
+        config$release_month <- as.numeric(names(sort(table(release_months), decreasing = TRUE)[1]))
+      } else {
+        config$release_month <- 6
+      }
+    } else {
+      config$release_month <- 6
+    }
+    
+    if("Rated" %in% names(successful_movies)) {
+      rating_performance <- successful_movies %>%
+        filter(Rated %in% c("PG", "PG-13", "R")) %>%
+        group_by(Rated) %>%
+        summarise(
+          avg_revenue = mean(BoxOffice_num, na.rm = TRUE),
+          .groups = 'drop'
+        )
+      
+      if(nrow(rating_performance) > 0) {
+        config$mpaa_rating <- rating_performance %>%
+          arrange(desc(avg_revenue)) %>%
+          slice(1) %>%
+          pull(Rated)
+      } else {
+        config$mpaa_rating <- "PG-13"
+      }
+    } else {
+      config$mpaa_rating <- "PG-13"
+    }
+    
+  } else {
+    config$runtime <- 120
+    config$genres <- "Drama, Thriller"
+    config$release_month <- 6
+    config$mpaa_rating <- "PG-13"
+  }
+  
+  return(config)
+}
+
+# PERFORMANCE PREDICTION 
+
+predict_performance_ml <- function(movie, reference_movies, optimization) {
+  performance <- list()
+  
+  similar_movies <- reference_movies %>%
+    filter(
+      grepl(strsplit(movie$genres, ",")[[1]][1], Genre),
+      abs(Runtime_num - movie$runtime) < 30
+    )
+  
+  if(nrow(similar_movies) > 0) {
+    performance$revenue <- mean(similar_movies$BoxOffice_num, na.rm = TRUE) / 1e6
+    performance$rating <- mean(similar_movies$imdbRating, na.rm = TRUE)
+    
+    if(optimization == "boxoffice") {
+      performance$revenue <- performance$revenue * 1.2
+    } else if(optimization == "rating") {
+      performance$rating <- min(9.0, performance$rating + 0.5)
+    }
+    
+    performance$confidence <- min(0.9, 0.5 + nrow(similar_movies) * 0.05)
+    
+  } else {
+    performance$revenue <- 150
+    performance$rating <- 7.0
+    performance$confidence <- 0.5
+  }
+  
+  performance$breakdown <- list(
+    similar_movies_count = nrow(similar_movies),
+    genre_match = TRUE,
+    runtime_match = TRUE,
+    optimization_applied = optimization
+  )
+  
+  return(performance)
+}
+
+# RESULT UI
+
+create_enhanced_result_ui <- function(movie, performance, model_info) {
+  tags$div(
+    style = "background: white; padding: 25px; border-radius: 12px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-top: 20px;",
+    
+    tags$div(
+      style = "background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+              color: white; padding: 15px; border-radius: 8px; margin-bottom: 20px;",
+      tags$div(
+        style = "display: flex; justify-content: space-between; align-items: center;",
+        tags$h4(movie$title, style = "margin: 0;"),
+        tags$small(
+          "Generated with ", 
+          toupper(model_info$type), 
+          " model",
+          style = "opacity: 0.9;"
+        )
+      )
+    ),
+    
+    tags$div(
+      style = "display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 25px;",
+      
+      tags$div(
+        style = "text-align: center; padding: 15px; background: #f7fafc; border-radius: 8px;",
+        tags$div(style = "font-size: 24px; font-weight: bold; color: #2d3748;",
+                paste0("$", round(performance$revenue), "M")),
+        tags$small("Predicted Box Office", style = "color: #718096;")
+      ),
+      
+      tags$div(
+        style = "text-align: center; padding: 15px; background: #f7fafc; border-radius: 8px;",
+        tags$div(style = "font-size: 24px; font-weight: bold; color: #2d3748;",
+                round(performance$rating, 1)),
+        tags$small("IMDb Rating", style = "color: #718096;")
+      ),
+      
+      tags$div(
+        style = "text-align: center; padding: 15px; background: #f7fafc; border-radius: 8px;",
+        tags$div(style = "font-size: 24px; font-weight: bold; color: #2d3748;"),
+        tags$div(style = "font-size: 24px; font-weight: bold; color: #2d3748;",
+                paste0(round(performance$confidence * 100), "%")),
+        tags$small("Prediction Confidence", style = "color: #718096;")
+      )
+    ),
+    
+    tags$div(
+      style = "background: #edf2f7; padding: 20px; border-radius: 8px; margin-bottom: 20px;",
+      tags$h5("📝 AI-Generated Plot", style = "margin-bottom: 15px;"),
+      tags$p(movie$plot, style = "line-height: 1.8; color: #4a5568; margin: 0;")
+    ),
+    
+    tags$div(
+      style = "background: #e6fffa; padding: 20px; border-radius: 8px; margin-bottom: 20px;",
+      tags$h5("🎬 Production Configuration", style = "margin-bottom: 15px;"),
+      
+      tags$div(
+        style = "display: grid; grid-template-columns: 1fr 1fr; gap: 20px;",
+        
+        tags$div(
+          tags$p(tags$strong("Director: "), movie$director),
+          tags$p(tags$strong("Cast: "), movie$cast),
+          tags$p(tags$strong("Runtime: "), paste(movie$runtime, "minutes"))
+        ),
+        
+        tags$div(
+          tags$p(tags$strong("Genres: "), movie$genres),
+          tags$p(tags$strong("MPAA Rating: "), movie$mpaa_rating),
+          tags$p(tags$strong("Release Month: "), month.name[movie$release_month])
+        )
+      )
+    ),
+    
+    tags$div(
+      style = "background: #f0f4f8; padding: 20px; border-radius: 8px;",
+      tags$h5("🤖 AI Generation Details", style = "margin-bottom: 15px;"),
+      
+      tags$div(
+        style = "font-size: 14px; color: #4a5568;",
+        tags$p(
+          tags$strong("Model: "), toupper(movie$ai_model), br(),
+          tags$strong("Optimization: "), 
+          switch(movie$optimization,
+            "boxoffice" = "Maximizing box office revenue",
+            "rating" = "Maximizing critical acclaim",
+            "Balanced approach"
+          ), br(),
+          tags$strong("Based on: "), 
+          performance$breakdown$similar_movies_count, 
+          " similar successful movies"
+        )
+      )
+    )
+  )
+}
+
+# VALIDATION FUNCTIONS
+
+validate_movie <- function(movie) {
+  required_fields <- c("title", "plot", "director", "cast", "genres", 
+                      "runtime", "release_month", "mpaa_rating")
+  
+  for(field in required_fields) {
+    if(is.null(movie[[field]])) {
+      movie[[field]] <- switch(field,
+        "title" = "Untitled Project",
+        "plot" = "A compelling story awaits.",
+        "director" = "Visionary Director",
+        "cast" = "Talented Ensemble",
+        "genres" = "Drama",
+        "runtime" = 120,
+        "release_month" = 6,
+        "mpaa_rating" = "PG-13"
+      )
+    }
+  }
+  
+  return(movie)
+}
+
+validate_performance <- function(performance) {
+  performance$revenue <- performance$revenue %||% 150
+  performance$rating <- performance$rating %||% 7.0
+  performance$confidence <- performance$confidence %||% 0.7
+  
+  performance$revenue <- max(10, min(1000, performance$revenue))
+  performance$rating <- max(1, min(10, performance$rating))
+  performance$confidence <- max(0, min(1, performance$confidence))
+  
+  return(performance)
+}
+
+# ERROR RECOVERY
+
+recover_from_error <- function(error_message, input) {
+  cat("Error in AI generation:", error_message, "\n")
+  
+  fallback_movie <- list(
+    title = "The Journey",
+    plot = "An inspiring tale of courage and determination unfolds.",
+    director = "Acclaimed Director",
+    cast = "Star-studded Cast",
+    genres = "Drama, Adventure",
+    runtime = 120,
+    release_month = 6,
+    mpaa_rating = "PG-13",
+    ai_model = input$ai_model_type %||% "ensemble",
+    optimization = input$optimization_type %||% "balanced"
+  )
+  
+  fallback_performance <- list(
+    revenue = 150,
+    rating = 7.0,
+    confidence = 0.5,
+    breakdown = list(
+      similar_movies_count = 0,
+      genre_match = FALSE,
+      runtime_match = FALSE,
+      optimization_applied = "none"
+    )
+  )
+  
+  return(list(
+    movie = fallback_movie,
+    performance = fallback_performance,
+    error = error_message
+  ))
+}
+
+# DATA VALIDATION
+
+validate_input_data <- function(movies_data) {
+  if(is.null(movies_data) || !is.data.frame(movies_data)) {
+    stop("Invalid movie data format")
+  }
+  
+  if(nrow(movies_data) == 0) {
+    stop("No movies in dataset")
+  }
+  
+  required_cols <- c("Title", "Plot", "Genre")
+  missing_cols <- setdiff(required_cols, names(movies_data))
+  
+  if(length(missing_cols) > 0) {
+    stop(paste("Missing required columns:", paste(missing_cols, collapse = ", ")))
+  }
+  
+  valid_rows <- movies_data %>%
+    filter(!is.na(Title), !is.na(Plot), nchar(Plot) > 10)
+  
+  if(nrow(valid_rows) < 10) {
+    warning("Limited valid data available")
+  }
+  
+  return(TRUE)
+}
+
+# CACHE MANAGEMENT
+
+create_pattern_cache <- function() {
+  cache <- new.env(parent = emptyenv())
+  
+  cache$get <- function(key) {
+    if(exists(key, envir = cache)) {
+      return(get(key, envir = cache))
+    }
+    return(NULL)
+  }
+  
+  cache$set <- function(key, value) {
+    assign(key, value, envir = cache)
+  }
+  
+  cache$clear <- function() {
+    rm(list = ls(envir = cache), envir = cache)
+  }
+  
+  return(cache)
+}
+
+pattern_cache <- create_pattern_cache()
+
+extract_patterns_cached <- function(movies, cache_key) {
+  cached_patterns <- pattern_cache$get(cache_key)
+  if(!is.null(cached_patterns)) {
+    return(cached_patterns)
+  }
+  
+  patterns <- extract_patterns_optimized(movies)
+  pattern_cache$set(cache_key, patterns)
+  
+  return(patterns)
+}
+
+# SAFE WRAPPER
+
+safe_ai_generation <- function(input, movies_clean) {
+  result <- tryCatch({
+    validate_input_data(movies_clean)
+    return(list(success = TRUE))
+  }, error = function(e) {
+    recovery <- recover_from_error(e$message, input)
+    return(list(
+      success = FALSE,
+      movie = recovery$movie,
+      performance = recovery$performance,
+      error = e$message
+    ))
+  })
+  
+  return(result)
+}
+```
+
+# Test Performance 
+
+### Figure 1: MSE and R² Comparison
+
+```{r}
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+
+# Helper to compute metrics
+get_metrics <- function(y, yhat) {
+  mse <- mean((y - yhat)^2)
+  r2  <- 1 - sum((y - yhat)^2) / sum((y - mean(y))^2)
+  c(MSE = mse, R2 = r2)
+}
+
+# Train models and get train/test split
+models_static <- build_ensemble_model(movies_clean)
+
+test_data  <- models_static$test_data
+y_test_log <- log(test_data$BoxOffice_num)
+
+# Predictions on test set (log scale)
+
+## GAM & Linear Model: use full test_data
+pred_gam_log <- predict(models_static$gam, newdata = test_data)
+pred_lm_log  <- predict(models_static$lm,  newdata = test_data)
+
+## RF & SVM: numeric features (like training)
+rf_test_features <- test_data %>%
+  dplyr::select_if(is.numeric) %>%
+  dplyr::select(-BoxOffice_num)
+
+idx_complete <- complete.cases(rf_test_features)
+rf_test_features <- rf_test_features[idx_complete, ]
+y_test_log_rf    <- y_test_log[idx_complete]
+
+pred_rf_log  <- predict(models_static$rf,  newdata = rf_test_features)
+pred_svm_log <- predict(models_static$svm, newdata = rf_test_features)
+
+# Compute metrics for each model
+m_gam <- get_metrics(y_test_log,    pred_gam_log)
+m_lm  <- get_metrics(y_test_log,    pred_lm_log)
+m_rf  <- get_metrics(y_test_log_rf, pred_rf_log)
+m_svm <- get_metrics(y_test_log_rf, pred_svm_log)
+
+metrics_df <- tibble(
+  Model = factor(c("GAM", "Random Forest", "Linear Model", "SVM"),
+                 levels = c("GAM", "Random Forest", "Linear Model", "SVM")),
+  MSE = c(m_gam["MSE"], m_rf["MSE"], m_lm["MSE"], m_svm["MSE"]),
+  R2  = c(m_gam["R2"],  m_rf["R2"],  m_lm["R2"],  m_svm["R2"])
+)
+
+# Long format for faceted bar plot
+metrics_long <- metrics_df %>%
+  pivot_longer(cols = c(MSE, R2),
+               names_to = "Metric",
+               values_to = "Value")
+
+ggplot(metrics_long, aes(x = Model, y = Value, fill = Model)) +
+  geom_col() +
+  facet_wrap(~ Metric, scales = "free_y") +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+    axis.text.x = element_text(angle = 45, hjust = 1)  # <-- Fix overlap
+  ) +
+  labs(
+    title = "Model Performance (MSE and R²)",
+    x = "Model",
+    y = "Value"
+  )
+
+```
+
+
+### Figure 2: Residual Density Comparison
+```{r}
+library(dplyr)
+library(ggplot2)
+library(tibble)
+
+# Fit models and get train/test split
+models_static <- build_ensemble_model(movies_clean)
+
+test_data  <- models_static$test_data
+y_test_log <- log(test_data$BoxOffice_num)
+
+# Predictions (on log scale)
+
+## GAM & Linear Model: use full test_data
+pred_gam_log <- predict(models_static$gam, newdata = test_data)
+pred_lm_log  <- predict(models_static$lm,  newdata = test_data)
+
+## RF & SVM: numeric features as in training
+rf_test_features <- test_data %>%
+  dplyr::select_if(is.numeric) %>%
+  dplyr::select(-BoxOffice_num)
+
+idx_complete      <- complete.cases(rf_test_features)
+rf_test_features  <- rf_test_features[idx_complete, ]
+y_test_log_rf     <- y_test_log[idx_complete]
+
+pred_rf_log  <- predict(models_static$rf,  newdata = rf_test_features)
+pred_svm_log <- predict(models_static$svm, newdata = rf_test_features)
+
+# Residuals = actual - predicted (log scale)
+resid_df <- bind_rows(
+  tibble(Model = "GAM",
+         residual = y_test_log - pred_gam_log),
+  tibble(Model = "Linear Model",
+         residual = y_test_log - pred_lm_log),
+  tibble(Model = "Random Forest",
+         residual = y_test_log_rf - pred_rf_log),
+  tibble(Model = "SVM",
+         residual = y_test_log_rf - pred_svm_log)
+)
+
+# Density plot of residuals
+ggplot(resid_df, aes(x = residual, fill = Model, colour = Model)) +
+  geom_density(alpha = 0.25) +
+  theme_minimal() +
+  labs(
+    title = "Residual Density Comparison Across Models",
+    x = "Residual (log Box Office)",
+    y = "Density"
+  )
+```
+
+
+### 📘 How to Read These Graphs {data-width=400}
+
+<span style="color: #246A73;">**Understanding Figure 1: MSE and R² Comparison**</span>
+
+What this figure shows:
+
+Left panel (MSE): Mean Squared Error
+
+- Measures the average squared distance between predicted and true log box office.
+
+- Lower bars are better → the model’s predictions stay closer to the actual values.
+
+Right panel (R²): R-squared
+
+- Measures the fraction of variability in log box office that the model explains.
+
+- Higher bars are better → the model captures more of the real signal in the data.
+
+<span style="color: #246A73;">**How to interpret the current bars?**</span>
+
+Random Forest has the lowest MSE and highest R², so it is the best overall performer.
+
+SVM also performs well, with reasonably low MSE and high R², but not as strong as Random Forest.
+
+GAM and the Linear Model have larger MSE and lower R², meaning they miss more structure in the data and make less accurate predictions.
+
+<span style="color: #246A73;">**Understanding Figure 2: Residual Density Comparison**</span>
+
+What this figure shows:
+
+- Each curve is the distribution of residuals (actual − predicted log box office) for one model.
+
+- The x-axis is the residual value; the y-axis is density (how often that residual size occurs).
+
+A good model will have:
+
+- Residuals clustered tightly around 0 (narrow, tall peak at 0),
+
+- And relatively few large positive or negative residuals (thin tails).
+
+<span style="color: #246A73;">**How to interpret the current curves?**</span>
+
+Random Forest and SVM have sharper peaks near zero and thinner tails, indicating smaller, more consistent errors.
+
+GAM and the Linear Model show wider, flatter curves, meaning their residuals are more spread out, with more frequent large errors.
+
+If you see systematic skew (more mass on one side), that suggests the model tends to over- or under-predict for certain movies.

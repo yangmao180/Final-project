@@ -1,0 +1,12 @@
+name: MovieProphet
+title: MovieProphet
+username: rlim8
+account: rlim8
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 16312615
+bundleId: 11322582
+url: https://rlim8.shinyapps.io/MovieProphet/
+version: 1
+asMultiple: FALSE
+asStatic: FALSE

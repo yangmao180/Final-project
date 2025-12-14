@@ -1,0 +1,12 @@
+name: dashboard_2
+title:
+username: rlim8
+account: rlim8
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 16299970
+bundleId: 11322565
+url: https://rlim8.shinyapps.io/dashboard_2/
+version: 1
+asMultiple: FALSE
+asStatic: FALSE
