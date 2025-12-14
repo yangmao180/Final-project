@@ -1,10 +1,12 @@
 ---
 title: "Movie Prophet"
-output: 
+output:
   flexdashboard::flex_dashboard:
     orientation: rows
     vertical_layout: fill
 runtime: shiny
+resource_files:
+- www/movies.jpg.webp
 ---
 
 <style>
@@ -208,6 +210,7 @@ This tab evaluates the performance of the machine learning models used to predic
 
 1. Wikipedia List of American Films released between 2000-2025 (up until November 16 2025)
 2. OMDB API for box office revenue, IMDB ratings, genre, runtime, and other variables.
+3. priceR package for inflation adjustment factors 
 
 
 # Overview 
